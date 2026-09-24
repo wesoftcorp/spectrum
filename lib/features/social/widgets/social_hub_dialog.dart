@@ -20,6 +20,7 @@ class SocialHubDialog extends ConsumerStatefulWidget {
 }
 
 class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
+  bool _showHistory = false;
   late final TextEditingController _captionController;
   late final TextEditingController _altTextController;
   late final TextEditingController _discordWebhookController;
@@ -97,28 +98,31 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
             // Top Bar: Brand, Platform selector & Close
             _buildTopBar(platform, notifier),
 
-            // Content Area: 2 Columns (Aspect Preview & Caption Composer)
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Left Column: Aspect Ratio & Image Framing Preview
-                  Expanded(
-                    flex: 4,
-                    child: _buildAspectPreviewColumn(state, notifier, isDark),
-                  ),
+            // Content Area: Either History or 2-Column Publisher Studio
+            if (_showHistory)
+              Expanded(child: _buildHistoryView(state))
+            else
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Left Column: Aspect Ratio & Image Framing Preview
+                    Expanded(
+                      flex: 4,
+                      child: _buildAspectPreviewColumn(state, notifier, isDark),
+                    ),
 
-                  // Divider
-                  Container(width: 1, color: Colors.white.withValues(alpha: 0.08)),
+                    // Divider
+                    Container(width: 1, color: Colors.white.withValues(alpha: 0.08)),
 
-                  // Right Column: Caption, Tags, Character Limit & Webhooks
-                  Expanded(
-                    flex: 5,
-                    child: _buildComposerColumn(state, notifier, isDark),
-                  ),
-                ],
+                    // Right Column: Caption, Tags, Character Limit & Webhooks
+                    Expanded(
+                      flex: 5,
+                      child: _buildComposerColumn(state, notifier, isDark),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
             // Bottom Action Dock
             _buildBottomDock(state, notifier),
@@ -192,6 +196,17 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
                 ],
               ),
               const Spacer(),
+              // History / Studio Toggle
+              IconButton(
+                icon: Icon(
+                  _showHistory ? Icons.tune_rounded : Icons.history_rounded,
+                  color: _showHistory ? ApertixColors.cyanAccent : Colors.white70,
+                  size: 20,
+                ),
+                tooltip: _showHistory ? 'Return to Studio' : 'Publish History',
+                onPressed: () => setState(() => _showHistory = !_showHistory),
+              ),
+              const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
                 onPressed: () => Navigator.of(context).pop(),
@@ -724,6 +739,107 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHistoryView(SocialHubState state) {
+    if (state.history.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.history_toggle_off_rounded, size: 48, color: Colors.white.withValues(alpha: 0.2)),
+            const SizedBox(height: 12),
+            const Text(
+              'No publishing activity yet',
+              style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Posts and dispatches will be recorded here automatically.',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      itemCount: state.history.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final item = state.history[index];
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: item.success
+                  ? ApertixColors.secondary.withValues(alpha: 0.2)
+                  : Colors.redAccent.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: item.platform.gradientColors),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(item.platform.icon, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          item.platform.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 13),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (item.success ? ApertixColors.secondary : Colors.redAccent)
+                                .withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item.success ? 'PUBLISHED' : 'FAILED',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: item.success ? ApertixColors.secondary : Colors.redAccent,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${item.publishedAt.year}-${item.publishedAt.month.toString().padLeft(2, '0')}-${item.publishedAt.day.toString().padLeft(2, '0')} ${item.publishedAt.hour.toString().padLeft(2, '0')}:${item.publishedAt.minute.toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontSize: 11, color: Colors.white38),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.caption.isNotEmpty ? item.caption : item.resultMessage,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

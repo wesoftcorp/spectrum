@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/di/providers.dart';
 import '../models/social_platform.dart';
+import '../models/social_account.dart';
+import '../models/publish_history_item.dart';
 import '../services/social_publish_service.dart';
+import '../services/token_vault_service.dart';
+import '../services/publish_history_service.dart';
 
 class SocialHubState {
   const SocialHubState({
@@ -9,18 +13,21 @@ class SocialHubState {
     this.isPublishing = false,
     this.lastResult,
     this.optimizedExportPath,
+    this.history = const [],
   });
 
   final SocialPostDraft draft;
   final bool isPublishing;
   final SocialPublishResult? lastResult;
   final String? optimizedExportPath;
+  final List<PublishHistoryItem> history;
 
   SocialHubState copyWith({
     SocialPostDraft? draft,
     bool? isPublishing,
     SocialPublishResult? Function()? lastResult,
     String? Function()? optimizedExportPath,
+    List<PublishHistoryItem>? history,
   }) {
     return SocialHubState(
       draft: draft ?? this.draft,
@@ -28,6 +35,7 @@ class SocialHubState {
       lastResult: lastResult != null ? lastResult() : this.lastResult,
       optimizedExportPath:
           optimizedExportPath != null ? optimizedExportPath() : this.optimizedExportPath,
+      history: history ?? this.history,
     );
   }
 }
@@ -36,7 +44,14 @@ final socialHubProvider =
     StateNotifierProvider.autoDispose.family<SocialHubNotifier, SocialHubState, String>(
   (ref, imagePath) {
     final service = ref.watch(socialPublishServiceProvider);
-    return SocialHubNotifier(imagePath: imagePath, service: service);
+    final vault = ref.watch(tokenVaultServiceProvider);
+    final history = ref.watch(publishHistoryServiceProvider);
+    return SocialHubNotifier(
+      imagePath: imagePath,
+      service: service,
+      vault: vault,
+      historyService: history,
+    );
   },
 );
 
@@ -44,7 +59,11 @@ class SocialHubNotifier extends StateNotifier<SocialHubState> {
   SocialHubNotifier({
     required String imagePath,
     required SocialPublishService service,
+    required TokenVaultService vault,
+    required PublishHistoryService historyService,
   })  : _service = service,
+        _vault = vault,
+        _historyService = historyService,
         super(
           SocialHubState(
             draft: SocialPostDraft(
@@ -54,11 +73,38 @@ class SocialHubNotifier extends StateNotifier<SocialHubState> {
               tags: List.from(SocialPlatform.instagram.defaultTags),
             ),
           ),
-        );
+        ) {
+    _init();
+  }
 
   final SocialPublishService _service;
+  final TokenVaultService _vault;
+  final PublishHistoryService _historyService;
 
-  void setPlatform(SocialPlatform platform) {
+  Future<void> _init() async {
+    await loadHistory();
+    await _loadAccountForPlatform(state.draft.platform);
+  }
+
+  Future<void> loadHistory() async {
+    final list = await _historyService.getHistory();
+    state = state.copyWith(history: list);
+  }
+
+  Future<void> _loadAccountForPlatform(SocialPlatform platform) async {
+    final account = await _vault.getAccount(platform);
+    if (account != null) {
+      state = state.copyWith(
+        draft: state.draft.copyWith(
+          discordWebhookUrl: account.webhookUrl,
+          telegramBotToken: account.token,
+          telegramChatId: account.channelOrChatId,
+        ),
+      );
+    }
+  }
+
+  Future<void> setPlatform(SocialPlatform platform) async {
     state = state.copyWith(
       draft: state.draft.copyWith(
         platform: platform,
@@ -67,6 +113,7 @@ class SocialHubNotifier extends StateNotifier<SocialHubState> {
       ),
       lastResult: () => null,
     );
+    await _loadAccountForPlatform(platform);
   }
 
   void setPreset(SocialPreset preset) {
@@ -99,16 +146,39 @@ class SocialHubNotifier extends StateNotifier<SocialHubState> {
     );
   }
 
-  void setDiscordWebhook(String url) {
+  Future<void> setDiscordWebhook(String url) async {
     state = state.copyWith(
       draft: state.draft.copyWith(discordWebhookUrl: url),
     );
+    if (url.trim().isNotEmpty) {
+      await _vault.saveAccount(
+        SocialAccount(
+          id: 'discord_${DateTime.now().millisecondsSinceEpoch}',
+          platform: SocialPlatform.discord,
+          displayName: 'Discord Webhook',
+          webhookUrl: url.trim(),
+          connectedAt: DateTime.now(),
+        ),
+      );
+    }
   }
 
-  void setTelegramCredentials(String token, String chatId) {
+  Future<void> setTelegramCredentials(String token, String chatId) async {
     state = state.copyWith(
       draft: state.draft.copyWith(telegramBotToken: token, telegramChatId: chatId),
     );
+    if (token.trim().isNotEmpty && chatId.trim().isNotEmpty) {
+      await _vault.saveAccount(
+        SocialAccount(
+          id: 'telegram_${DateTime.now().millisecondsSinceEpoch}',
+          platform: SocialPlatform.telegram,
+          displayName: 'Telegram Channel',
+          token: token.trim(),
+          channelOrChatId: chatId.trim(),
+          connectedAt: DateTime.now(),
+        ),
+      );
+    }
   }
 
   Future<SocialPublishResult> shareViaSystem() async {
@@ -119,6 +189,19 @@ class SocialHubNotifier extends StateNotifier<SocialHubState> {
         text: state.draft.fullFormattedText,
       );
       state = state.copyWith(lastResult: () => res);
+
+      await _historyService.addRecord(
+        PublishHistoryItem(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          platform: state.draft.platform,
+          imagePath: state.draft.imagePath,
+          caption: state.draft.caption,
+          publishedAt: DateTime.now(),
+          success: res.success,
+          resultMessage: res.message,
+        ),
+      );
+      await loadHistory();
       return res;
     } finally {
       state = state.copyWith(isPublishing: false);
@@ -142,6 +225,19 @@ class SocialHubNotifier extends StateNotifier<SocialHubState> {
         altText: state.draft.altText.isNotEmpty ? state.draft.altText : null,
       );
       state = state.copyWith(lastResult: () => res);
+
+      await _historyService.addRecord(
+        PublishHistoryItem(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          platform: SocialPlatform.discord,
+          imagePath: state.draft.imagePath,
+          caption: state.draft.caption,
+          publishedAt: DateTime.now(),
+          success: res.success,
+          resultMessage: res.message,
+        ),
+      );
+      await loadHistory();
       return res;
     } finally {
       state = state.copyWith(isPublishing: false);
@@ -166,6 +262,19 @@ class SocialHubNotifier extends StateNotifier<SocialHubState> {
         caption: state.draft.fullFormattedText,
       );
       state = state.copyWith(lastResult: () => res);
+
+      await _historyService.addRecord(
+        PublishHistoryItem(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          platform: SocialPlatform.telegram,
+          imagePath: state.draft.imagePath,
+          caption: state.draft.caption,
+          publishedAt: DateTime.now(),
+          success: res.success,
+          resultMessage: res.message,
+        ),
+      );
+      await loadHistory();
       return res;
     } finally {
       state = state.copyWith(isPublishing: false);
@@ -173,10 +282,24 @@ class SocialHubNotifier extends StateNotifier<SocialHubState> {
   }
 
   Future<SocialPublishResult> openPlatformAppOrWeb() async {
-    return _service.openPlatform(
+    final res = await _service.openPlatform(
       state.draft.platform,
       caption: state.draft.fullFormattedText,
     );
+    await _historyService.addRecord(
+      PublishHistoryItem(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        platform: state.draft.platform,
+        imagePath: state.draft.imagePath,
+        caption: state.draft.caption,
+        publishedAt: DateTime.now(),
+        success: res.success,
+        resultMessage: res.message,
+        postUrl: res.url,
+      ),
+    );
+    await loadHistory();
+    return res;
   }
 
   Future<void> copyCaption() async {
