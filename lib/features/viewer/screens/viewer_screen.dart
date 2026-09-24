@@ -20,6 +20,8 @@ import '../../social/widgets/social_hub_dialog.dart';
 import '../../../core/licensing/widgets/license_dialog.dart';
 import '../../../core/licensing/providers/license_provider.dart';
 import '../../analysis/widgets/histogram_overlay.dart';
+import '../../collections/providers/collections_provider.dart';
+import '../../cloud/widgets/cloud_vault_dialog.dart';
 
 /// Iconic Google Picasa-style borderless photo viewer player.
 class ViewerScreen extends ConsumerStatefulWidget {
@@ -527,6 +529,39 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
             onPressed: () => setState(() => _showHistogram = !_showHistogram),
           ),
 
+          // Favorite Heart Toggle
+          IconButton(
+            icon: Icon(
+              ref.watch(favoritesProvider).contains(viewerState.currentPath)
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              color: ref.watch(favoritesProvider).contains(viewerState.currentPath)
+                  ? const Color(0xFFFF4757)
+                  : Colors.white70,
+              size: 18,
+            ),
+            tooltip: 'Favorite (F)',
+            onPressed: () {
+              if (viewerState.currentPath != null) {
+                ref.read(favoritesProvider.notifier).toggle(viewerState.currentPath!);
+              }
+            },
+          ),
+
+          // Cloud Vault Backup
+          IconButton(
+            icon: const Icon(Icons.cloud_upload_outlined, color: ApertixColors.cyanAccent, size: 18),
+            tooltip: 'Backup to Cloud Vault',
+            onPressed: () {
+              if (viewerState.currentPath != null) {
+                showDialog(
+                  context: context,
+                  builder: (_) => CloudVaultDialog(filePaths: [viewerState.currentPath!]),
+                );
+              }
+            },
+          ),
+
           // Social Hub 1-tap launcher
           IconButton(
             icon: const Icon(Icons.share_rounded, color: ApertixColors.cyanAccent, size: 18),
@@ -597,6 +632,11 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
       case LogicalKeyboardKey.keyS:
         final currentPath = ref.read(viewerProvider).valueOrNull?.currentPath;
         _openSocialHub(currentPath);
+      case LogicalKeyboardKey.keyF:
+        final currentPath = ref.read(viewerProvider).valueOrNull?.currentPath;
+        if (currentPath != null) {
+          ref.read(favoritesProvider.notifier).toggle(currentPath);
+        }
       case LogicalKeyboardKey.keyH:
         setState(() => _showHistogram = !_showHistogram);
       case LogicalKeyboardKey.keyC:

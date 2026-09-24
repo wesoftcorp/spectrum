@@ -16,6 +16,9 @@ import '../../../data/sources/local/image_file_service.dart';
 import '../providers/gallery_provider.dart';
 import '../widgets/image_thumbnail.dart';
 import '../../batch/widgets/batch_dialog.dart';
+import '../../collections/providers/collections_provider.dart';
+import '../../collections/widgets/album_picker_dialog.dart';
+import '../../cloud/widgets/cloud_vault_dialog.dart';
 
 enum _SortOption { nameAsc, nameDesc, dateNewest, dateOldest, sizeLargest }
 enum _GridDensity { compact, comfortable, large }
@@ -32,6 +35,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   String _searchQuery = '';
   _SortOption _sortOption = _SortOption.dateNewest;
   String _formatFilter = 'ALL';
+  bool _favoritesFilter = false;
   _GridDensity _density = _GridDensity.comfortable;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
@@ -70,6 +74,12 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
 
   List<ImageFile> _processImages(List<ImageFile> rawList) {
     var list = List<ImageFile>.from(rawList);
+
+    // Filter by favorites
+    if (_favoritesFilter) {
+      final favs = ref.watch(favoritesProvider);
+      list = list.where((img) => favs.contains(img.path)).toList();
+    }
 
     // Filter by format
     if (_formatFilter != 'ALL') {
@@ -227,7 +237,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
               right: 0,
               child: Center(
                 child: galleryState.maybeWhen(
-                  data: (images) => _buildSelectionDock(context, _processImages(images), isDark),
+                  data: (images) => _buildSelectionDock(_processImages(images), isDark),
                   orElse: () => const SizedBox.shrink(),
                 ),
               ),
@@ -237,7 +247,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     );
   }
 
-  Widget _buildSelectionDock(BuildContext context, List<ImageFile> currentImages, bool isDark) {
+  Widget _buildSelectionDock(List<ImageFile> currentImages, bool isDark) {
     final count = _selectedPaths.length;
 
     return ClipRRect(
@@ -336,6 +346,51 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                     _clearSelection();
                     ref.read(galleryProvider.notifier).refresh();
                   }
+                },
+              ),
+              const SizedBox(width: 8),
+
+              // Album assignment button
+              OutlinedButton.icon(
+                icon: const Icon(Icons.photo_library_outlined, size: 16),
+                label: const Text('Album'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  final albumName = await showDialog<String>(
+                    context: context,
+                    builder: (_) => AlbumPickerDialog(imagePaths: _selectedPaths.toList()),
+                  );
+                  if (albumName != null && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Added to "$albumName"')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+
+              // Cloud Vault Backup button
+              OutlinedButton.icon(
+                icon: const Icon(Icons.cloud_upload_outlined, size: 16, color: ApertixColors.cyanAccent),
+                label: const Text('Backup'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ApertixColors.cyanAccent,
+                  side: BorderSide(color: ApertixColors.cyanAccent.withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => CloudVaultDialog(filePaths: _selectedPaths.toList()),
+                  );
                 },
               ),
               const SizedBox(width: 8),
@@ -621,6 +676,44 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                 ),
               );
             }).toList(),
+          ),
+          const SizedBox(width: 8),
+
+          // Favorites Filter Pill
+          InkWell(
+            onTap: () => setState(() => _favoritesFilter = !_favoritesFilter),
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _favoritesFilter
+                    ? const Color(0xFFFF4757).withValues(alpha: 0.2)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: _favoritesFilter ? const Color(0xFFFF4757) : Colors.transparent,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _favoritesFilter ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    size: 13,
+                    color: _favoritesFilter ? const Color(0xFFFF4757) : (isDark ? Colors.white60 : Colors.black54),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'FAVORITES',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: _favoritesFilter ? FontWeight.w800 : FontWeight.w500,
+                      color: _favoritesFilter ? const Color(0xFFFF4757) : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
 
           const Spacer(),
