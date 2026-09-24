@@ -293,7 +293,28 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ),
-              const SizedBox(width: 8),
+              // Compare (2) button if exactly 2 images selected
+              if (count == 2) ...[
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.compare_rounded, size: 16, color: ApertixColors.cyanAccent),
+                  label: const Text('Compare (2)'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: ApertixColors.cyanAccent,
+                    side: BorderSide(color: ApertixColors.cyanAccent.withValues(alpha: 0.6)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    final list = _selectedPaths.toList();
+                    context.push('/comparison', extra: {
+                      'imagePathA': list[0],
+                      'imagePathB': list[1],
+                    });
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
 
               // Launch Batch Processing Studio
               FilledButton.icon(

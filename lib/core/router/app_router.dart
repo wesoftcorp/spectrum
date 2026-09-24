@@ -5,6 +5,7 @@ import '../../features/viewer/screens/viewer_screen.dart';
 import '../../features/gallery/screens/gallery_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/editor/screens/editor_screen.dart';
+import '../../features/comparison/screens/comparison_screen.dart';
 
 /// GoRouter provider — referencing it in ConsumerWidget ensures proper lifecycle.
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -44,6 +45,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final extra = state.extra as Map<String, dynamic>?;
           final filePath = extra?['filePath'] as String? ?? '';
           return EditorScreen(filePath: filePath);
+        },
+      ),
+
+      // Comparison Studio — Before/After & Dual Image Analysis
+      GoRoute(
+        path: '/comparison',
+        name: 'comparison',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final imagePathA = extra?['imagePathA'] as String? ?? '';
+          final imagePathB = extra?['imagePathB'] as String? ?? '';
+          final labelA = extra?['labelA'] as String?;
+          final labelB = extra?['labelB'] as String?;
+          return ComparisonScreen(
+            imagePathA: imagePathA,
+            imagePathB: imagePathB,
+            labelA: labelA,
+            labelB: labelB,
+          );
         },
       ),
 

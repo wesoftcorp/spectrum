@@ -19,6 +19,7 @@ import '../../metadata/widgets/metadata_drawer.dart';
 import '../../social/widgets/social_hub_dialog.dart';
 import '../../../core/licensing/widgets/license_dialog.dart';
 import '../../../core/licensing/providers/license_provider.dart';
+import '../../analysis/widgets/histogram_overlay.dart';
 
 /// Iconic Google Picasa-style borderless photo viewer player.
 class ViewerScreen extends ConsumerStatefulWidget {
@@ -51,6 +52,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
   bool _isFullscreen = false;
   bool _showFilmstrip = false;
   bool _isPlayingSlideshow = false;
+  bool _showHistogram = false;
   Timer? _slideshowTimer;
 
   // Animated Media state
@@ -315,8 +317,19 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
                     top: _showUi ? 0 : -64,
                     left: 0,
                     right: 0,
-                    child: _buildTopBorderlessBar(fileName, currentIndex + 1, viewerState.filePaths.length),
+                    child: _buildTopBorderlessBar(fileName, currentIndex + 1, viewerState.filePaths.length, viewerState),
                   ),
+
+                  // Floating Histogram HUD
+                  if (_showHistogram && currentPath != null)
+                    Positioned(
+                      top: 56,
+                      right: 16,
+                      child: HistogramOverlay(
+                        filePath: currentPath,
+                        onClose: () => setState(() => _showHistogram = false),
+                      ),
+                    ),
 
                   // Bottom Filmstrip (Auto-scrolls, togglable)
                   if (_showFilmstrip && viewerState.filePaths.length > 1)
@@ -424,7 +437,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
     );
   }
 
-  Widget _buildTopBorderlessBar(String fileName, int current, int total) {
+  Widget _buildTopBorderlessBar(String fileName, int current, int total, ViewerState viewerState) {
     return Container(
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -484,6 +497,34 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
               },
               child: const SizedBox.expand(),
             ),
+          ),
+
+          // Comparison Studio Launcher
+          if (total >= 2)
+            IconButton(
+              icon: const Icon(Icons.compare_rounded, color: ApertixColors.cyanAccent, size: 18),
+              tooltip: 'Compare with Neighbor (C)',
+              onPressed: () {
+                final paths = viewerState.filePaths;
+                final prevIndex = (viewerState.currentIndex - 1 + paths.length) % paths.length;
+                context.push('/comparison', extra: {
+                  'imagePathA': paths[prevIndex],
+                  'imagePathB': paths[viewerState.currentIndex],
+                  'labelA': 'Previous Photo',
+                  'labelB': 'Current Photo',
+                });
+              },
+            ),
+
+          // Histogram HUD Toggle
+          IconButton(
+            icon: Icon(
+              Icons.bar_chart_rounded,
+              color: _showHistogram ? ApertixColors.cyanAccent : Colors.white70,
+              size: 18,
+            ),
+            tooltip: 'Histogram HUD (H)',
+            onPressed: () => setState(() => _showHistogram = !_showHistogram),
           ),
 
           // Social Hub 1-tap launcher
@@ -556,6 +597,19 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
       case LogicalKeyboardKey.keyS:
         final currentPath = ref.read(viewerProvider).valueOrNull?.currentPath;
         _openSocialHub(currentPath);
+      case LogicalKeyboardKey.keyH:
+        setState(() => _showHistogram = !_showHistogram);
+      case LogicalKeyboardKey.keyC:
+        final vState = ref.read(viewerProvider).valueOrNull;
+        if (vState != null && vState.filePaths.length >= 2) {
+          final prevIdx = (vState.currentIndex - 1 + vState.filePaths.length) % vState.filePaths.length;
+          context.push('/comparison', extra: {
+            'imagePathA': vState.filePaths[prevIdx],
+            'imagePathB': vState.filePaths[vState.currentIndex],
+            'labelA': 'Previous Photo',
+            'labelB': 'Current Photo',
+          });
+        }
       case LogicalKeyboardKey.keyE:
         final current = ref.read(viewerProvider).valueOrNull?.currentPath;
         if (current != null) {

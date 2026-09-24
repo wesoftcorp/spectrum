@@ -13,6 +13,8 @@ import '../widgets/annotation_canvas.dart';
 import '../widgets/annotation_toolbar.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../social/widgets/social_hub_dialog.dart';
+import '../../analysis/services/histogram_service.dart';
+import '../services/auto_enhance_service.dart';
 
 enum _EditorTab { transform, adjust, filters, crop, annotate }
 
@@ -456,6 +458,58 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
+          // One-Click Smart Auto-Enhance
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: InkWell(
+              onTap: () async {
+                final hist = await const HistogramService().computeFromFile(widget.filePath);
+                final enhanced = const AutoEnhanceService().calculateEnhancement(hist);
+                notifier.commitChange((p) => p.copyWith(
+                  brightness: enhanced.brightness,
+                  contrast: enhanced.contrast,
+                  saturation: enhanced.saturation,
+                  exposure: enhanced.exposure,
+                ));
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Auto-Tune applied (Exposure: ${enhanced.exposure > 0 ? '+' : ''}${enhanced.exposure}, Contrast: ${enhanced.contrast > 0 ? '+' : ''}${enhanced.contrast})'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [ApertixColors.primary, ApertixColors.secondary],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ApertixColors.primary.withValues(alpha: 0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_fix_high_rounded, color: Colors.white, size: 20),
+                    SizedBox(height: 4),
+                    Text(
+                      'Auto Tune',
+                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
           _buildSliderControl(
             label: 'Brightness',
             value: params.brightness,
