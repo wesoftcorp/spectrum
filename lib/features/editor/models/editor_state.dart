@@ -40,6 +40,7 @@ class EditorParameters {
     this.contrast = 0.0,   // -1.0 to 1.0
     this.saturation = 0.0, // -1.0 to 1.0
     this.exposure = 0.0,   // -1.0 to 1.0
+    this.vignette = 0.0,   // 0.0 to 1.0
     this.preset = FilterPreset.none,
     this.cropRect,
   });
@@ -51,6 +52,7 @@ class EditorParameters {
   final double contrast;
   final double saturation;
   final double exposure;
+  final double vignette;
   final FilterPreset preset;
   final Rect? cropRect; // Normalized [0, 0, 1, 1]
 
@@ -65,6 +67,7 @@ class EditorParameters {
       contrast != 0.0 ||
       saturation != 0.0 ||
       exposure != 0.0 ||
+      vignette != 0.0 ||
       preset != FilterPreset.none ||
       cropRect != null;
 
@@ -76,6 +79,7 @@ class EditorParameters {
     double? contrast,
     double? saturation,
     double? exposure,
+    double? vignette,
     FilterPreset? preset,
     Rect? Function()? cropRect,
   }) {
@@ -87,6 +91,7 @@ class EditorParameters {
       contrast: contrast ?? this.contrast,
       saturation: saturation ?? this.saturation,
       exposure: exposure ?? this.exposure,
+      vignette: vignette ?? this.vignette,
       preset: preset ?? this.preset,
       cropRect: cropRect != null ? cropRect() : this.cropRect,
     );

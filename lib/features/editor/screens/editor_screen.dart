@@ -8,8 +8,11 @@ import '../providers/editor_provider.dart';
 import '../widgets/crop_overlay.dart';
 import '../widgets/filter_preset_list.dart';
 import '../widgets/export_dialog.dart';
+import '../models/annotation_model.dart';
+import '../widgets/annotation_canvas.dart';
+import '../widgets/annotation_toolbar.dart';
 
-enum _EditorTab { transform, adjust, filters, crop }
+enum _EditorTab { transform, adjust, filters, crop, annotate }
 
 class EditorScreen extends ConsumerStatefulWidget {
   const EditorScreen({super.key, required this.filePath});
@@ -25,6 +28,12 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   CropAspectRatio _cropRatio = CropAspectRatio.free;
   bool _comparingOriginal = false;
   Size? _imageNaturalSize;
+
+  // Annotations state
+  final List<AnnotationItem> _annotations = [];
+  AnnotationType _activeAnnotationType = AnnotationType.pen;
+  Color _activeAnnotationColor = const Color(0xFFFF4757);
+  double _activeAnnotationStrokeWidth = 3.0;
 
   @override
   void initState() {
@@ -176,12 +185,34 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                           params.flipVertical ? -1.0 : 1.0,
                           1.0,
                         ),
-                        child: ColorFiltered(
-                          colorFilter: ColorFilter.matrix(colorMatrix),
-                          child: Image.file(
-                            File(widget.filePath),
-                            fit: BoxFit.contain,
-                          ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            ColorFiltered(
+                              colorFilter: ColorFilter.matrix(colorMatrix),
+                              child: Image.file(
+                                File(widget.filePath),
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            if (params.vignette > 0)
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: RadialGradient(
+                                        radius: 0.85,
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.black.withValues(alpha: params.vignette * 0.85),
+                                        ],
+                                        stops: const [0.4, 1.0],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -196,6 +227,30 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       selectedRatio: _cropRatio,
                       initialCrop: editorState.currentParams.cropRect,
                       onCropChanged: notifier.setCropRect,
+                    ),
+                  ),
+
+                // Annotation drawing overlay
+                if (_currentTab == _EditorTab.annotate)
+                  Positioned.fill(
+                    child: AnnotationCanvas(
+                      annotations: _annotations,
+                      activeType: _activeAnnotationType,
+                      activeColor: _activeAnnotationColor,
+                      activeStrokeWidth: _activeAnnotationStrokeWidth,
+                      onAnnotationAdded: (item) => setState(() => _annotations.add(item)),
+                    ),
+                  )
+                else if (_annotations.isNotEmpty)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnnotationCanvas(
+                        annotations: _annotations,
+                        activeType: _activeAnnotationType,
+                        activeColor: _activeAnnotationColor,
+                        activeStrokeWidth: _activeAnnotationStrokeWidth,
+                        onAnnotationAdded: (_) {},
+                      ),
                     ),
                   ),
               ],
@@ -238,6 +293,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     onSelectPreset: notifier.setFilterPreset,
                   ),
                 _EditorTab.crop => _buildCropSubpanel(notifier),
+                _EditorTab.annotate => AnnotationToolbar(
+                    activeType: _activeAnnotationType,
+                    activeColor: _activeAnnotationColor,
+                    activeStrokeWidth: _activeAnnotationStrokeWidth,
+                    canUndo: _annotations.isNotEmpty,
+                    onTypeChanged: (t) => setState(() => _activeAnnotationType = t),
+                    onColorChanged: (c) => setState(() => _activeAnnotationColor = c),
+                    onStrokeWidthChanged: (w) => setState(() => _activeAnnotationStrokeWidth = w),
+                    onUndo: () {
+                      if (_annotations.isNotEmpty) {
+                        setState(() => _annotations.removeLast());
+                      }
+                    },
+                    onClear: () => setState(() => _annotations.clear()),
+                  ),
               },
             ),
 
@@ -253,6 +323,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                   _buildTabButton(_EditorTab.crop, Icons.crop_rounded, 'Crop'),
                   _buildTabButton(_EditorTab.adjust, Icons.tune_rounded, 'Adjust'),
                   _buildTabButton(_EditorTab.filters, Icons.auto_awesome_rounded, 'Filters'),
+                  _buildTabButton(_EditorTab.annotate, Icons.draw_rounded, 'Annotate'),
                 ],
               ),
             ),
@@ -400,6 +471,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             onChanged: (v) => notifier.updateParamLive((p) => p.copyWith(exposure: v)),
             onChangeEnd: (v) => notifier.commitChange((p) => p.copyWith(exposure: v)),
           ),
+          _buildSliderControl(
+            label: 'Vignette',
+            value: params.vignette,
+            min: 0.0,
+            max: 1.0,
+            onChanged: (v) => notifier.updateParamLive((p) => p.copyWith(vignette: v)),
+            onChangeEnd: (v) => notifier.commitChange((p) => p.copyWith(vignette: v)),
+          ),
         ],
       ),
     );
@@ -482,6 +561,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         targetWidth: options.customWidth,
         targetHeight: options.customHeight,
         quality: options.quality,
+        annotations: _annotations,
       );
 
       if (!mounted) return;

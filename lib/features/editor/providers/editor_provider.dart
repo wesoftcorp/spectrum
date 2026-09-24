@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import '../models/editor_state.dart';
+import '../models/annotation_model.dart';
 import '../services/image_processor.dart';
 
 /// Provider family for the editor state keyed by the target file path.
@@ -117,14 +118,30 @@ class EditorNotifier extends StateNotifier<EditorState> {
     int? targetWidth,
     int? targetHeight,
     int quality = 90,
+    List<AnnotationItem> annotations = const [],
   }) async {
     state = state.copyWith(isProcessing: true);
     try {
       final outPath = customOutputPath ?? _generateDefaultOutputPath(state.filePath);
+      final exportAnnotations = annotations.map((a) {
+        return AnnotationExportData(
+          typeIndex: a.type.index,
+          points: a.points.map((p) => [p.dx, p.dy]).toList(),
+          r: (a.color.r * 255).round().clamp(0, 255),
+          g: (a.color.g * 255).round().clamp(0, 255),
+          b: (a.color.b * 255).round().clamp(0, 255),
+          a: (a.color.a * 255).round().clamp(0, 255),
+          strokeWidth: a.strokeWidth,
+          text: a.text,
+          fontSize: a.fontSize,
+        );
+      }).toList();
+
       final task = ImageProcessingTask(
         inputPath: state.filePath,
         outputPath: outPath,
         params: state.currentParams,
+        annotations: exportAnnotations,
         targetWidth: targetWidth,
         targetHeight: targetHeight,
         quality: quality,

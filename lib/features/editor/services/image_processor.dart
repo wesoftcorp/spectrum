@@ -1,8 +1,31 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import '../models/editor_state.dart';
+
+/// Lightweight, isolate-safe serialization for on-image annotations.
+class AnnotationExportData {
+  const AnnotationExportData({
+    required this.typeIndex, // 0: pen, 1: arrow, 2: rect, 3: circle, 4: text
+    required this.points,    // Normalized [0..1] [x, y] coordinates
+    required this.r,
+    required this.g,
+    required this.b,
+    required this.a,
+    this.strokeWidth = 3.0,
+    this.text,
+    this.fontSize = 18.0,
+  });
+
+  final int typeIndex;
+  final List<List<double>> points;
+  final int r, g, b, a;
+  final double strokeWidth;
+  final String? text;
+  final double fontSize;
+}
 
 /// Request parameters sent to the background isolate.
 class ImageProcessingTask {
@@ -10,6 +33,7 @@ class ImageProcessingTask {
     required this.inputPath,
     required this.outputPath,
     required this.params,
+    this.annotations = const [],
     this.targetWidth,
     this.targetHeight,
     this.quality = 90,
@@ -18,6 +42,7 @@ class ImageProcessingTask {
   final String inputPath;
   final String outputPath;
   final EditorParameters params;
+  final List<AnnotationExportData> annotations;
   final int? targetWidth;
   final int? targetHeight;
   final int quality;
@@ -75,7 +100,7 @@ class ImageProcessorService {
       );
     }
 
-    // 6. Color Adjustments: Brightness & Contrast
+    // 6. Color Adjustments: Brightness, Contrast & Saturation
     final totalBrightness = (task.params.brightness + task.params.exposure).clamp(-1.0, 1.0);
     if (totalBrightness != 0.0) {
       image = img.adjustColor(image, brightness: 1.0 + totalBrightness);
@@ -108,7 +133,143 @@ class ImageProcessorService {
         break;
     }
 
-    // 8. Encode & Save according to output extension
+    // 8. Vignette Falloff
+    if (task.params.vignette > 0) {
+      final cx = image.width / 2.0;
+      final cy = image.height / 2.0;
+      final maxDist = math.sqrt(cx * cx + cy * cy);
+      final vig = task.params.vignette;
+
+      for (final pixel in image) {
+        final dx = pixel.x - cx;
+        final dy = pixel.y - cy;
+        final dist = math.sqrt(dx * dx + dy * dy) / maxDist;
+        if (dist > 0.4) {
+          final factor = 1.0 - ((dist - 0.4) / 0.6 * vig * 0.85).clamp(0.0, 0.95);
+          pixel.r = (pixel.r * factor).round();
+          pixel.g = (pixel.g * factor).round();
+          pixel.b = (pixel.b * factor).round();
+        }
+      }
+    }
+
+    // 9. Burn-in On-Image Annotations
+    if (task.annotations.isNotEmpty) {
+      final imgW = image.width;
+      final imgH = image.height;
+
+      for (final ann in task.annotations) {
+        if (ann.points.isEmpty) continue;
+        final color = img.ColorRgba8(ann.r, ann.g, ann.b, ann.a);
+        final strokeThickness = ann.strokeWidth.round().clamp(1, 20);
+
+        final pts = ann.points.map((p) => [
+          (p[0] * imgW).round().clamp(0, imgW - 1),
+          (p[1] * imgH).round().clamp(0, imgH - 1),
+        ]).toList();
+
+        switch (ann.typeIndex) {
+          case 0: // Pen
+            for (int i = 0; i < pts.length - 1; i++) {
+              img.drawLine(
+                image,
+                x1: pts[i][0],
+                y1: pts[i][1],
+                x2: pts[i + 1][0],
+                y2: pts[i + 1][1],
+                color: color,
+                thickness: strokeThickness,
+                antialias: true,
+              );
+            }
+            break;
+
+          case 1: // Arrow
+            if (pts.length >= 2) {
+              final startX = pts[0][0];
+              final startY = pts[0][1];
+              final endX = pts[1][0];
+              final endY = pts[1][1];
+
+              img.drawLine(
+                image,
+                x1: startX,
+                y1: startY,
+                x2: endX,
+                y2: endY,
+                color: color,
+                thickness: strokeThickness,
+                antialias: true,
+              );
+
+              final angle = math.atan2(endY - startY, endX - startX);
+              final arrowLen = 18.0 * (strokeThickness / 3.0).clamp(1.0, 4.0);
+              const arrowAngle = math.pi / 6;
+
+              final h1x = (endX - arrowLen * math.cos(angle - arrowAngle)).round();
+              final h1y = (endY - arrowLen * math.sin(angle - arrowAngle)).round();
+              final h2x = (endX - arrowLen * math.cos(angle + arrowAngle)).round();
+              final h2y = (endY - arrowLen * math.sin(angle + arrowAngle)).round();
+
+              img.drawLine(image, x1: endX, y1: endY, x2: h1x, y2: h1y, color: color, thickness: strokeThickness, antialias: true);
+              img.drawLine(image, x1: endX, y1: endY, x2: h2x, y2: h2y, color: color, thickness: strokeThickness, antialias: true);
+            }
+            break;
+
+          case 2: // Rectangle
+            if (pts.length >= 2) {
+              final x1 = math.min(pts[0][0], pts[1][0]);
+              final y1 = math.min(pts[0][1], pts[1][1]);
+              final x2 = math.max(pts[0][0], pts[1][0]);
+              final y2 = math.max(pts[0][1], pts[1][1]);
+
+              img.drawRect(
+                image,
+                x1: x1,
+                y1: y1,
+                x2: x2,
+                y2: y2,
+                color: color,
+                thickness: strokeThickness,
+              );
+            }
+            break;
+
+          case 3: // Circle
+            if (pts.length >= 2) {
+              final cx = ((pts[0][0] + pts[1][0]) / 2).round();
+              final cy = ((pts[0][1] + pts[1][1]) / 2).round();
+              final rx = ((pts[1][0] - pts[0][0]).abs() / 2).round();
+              final ry = ((pts[1][1] - pts[0][1]).abs() / 2).round();
+              final radius = math.max(rx, ry);
+
+              img.drawCircle(
+                image,
+                x: cx,
+                y: cy,
+                radius: radius,
+                color: color,
+              );
+            }
+            break;
+
+          case 4: // Text
+            if (ann.text != null && pts.isNotEmpty) {
+              img.drawString(
+                image,
+                ann.text!,
+                font: img.arial24,
+                x: pts[0][0],
+                y: pts[0][1],
+                color: color,
+              );
+            }
+            break;
+        }
+      }
+    }
+
+    // 10. Encode & Save according to output extension
     final ext = p.extension(task.outputPath).toLowerCase().replaceFirst('.', '');
     List<int> encodedBytes;
     switch (ext) {
