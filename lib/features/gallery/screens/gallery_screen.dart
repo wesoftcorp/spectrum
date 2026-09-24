@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -10,11 +11,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/sources/local/image_file_service.dart';
 import '../providers/gallery_provider.dart';
 import '../widgets/image_thumbnail.dart';
+import '../../batch/widgets/batch_dialog.dart';
 
 enum _SortOption { nameAsc, nameDesc, dateNewest, dateOldest, sizeLargest }
 enum _GridDensity { compact, comfortable, large }
 
-/// Modern Nordic Frost & Cyber Luminescence Gallery Screen.
+/// Modern Nordic Frost & Cyber Luminescence Gallery Screen with Multi-Selection & Batch Processing.
 class GalleryScreen extends ConsumerStatefulWidget {
   const GalleryScreen({super.key});
 
@@ -30,10 +32,36 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
 
+  // Multi-Selection State
+  final Set<String> _selectedPaths = {};
+  bool get _isSelectionMode => _selectedPaths.isNotEmpty;
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _toggleSelect(String path) {
+    setState(() {
+      if (_selectedPaths.contains(path)) {
+        _selectedPaths.remove(path);
+      } else {
+        _selectedPaths.add(path);
+      }
+    });
+  }
+
+  void _selectAll(List<ImageFile> currentImages) {
+    setState(() {
+      _selectedPaths.addAll(currentImages.map((e) => e.path));
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selectedPaths.clear();
+    });
   }
 
   List<ImageFile> _processImages(List<ImageFile> rawList) {
@@ -97,88 +125,205 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     return Scaffold(
       backgroundColor: isDark ? ApertixColors.darkBackground : ApertixColors.lightBackground,
       appBar: _buildTopAppBar(context, isDark),
-      body: Column(
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          // Sub-header / Status Toolbar
-          galleryState.maybeWhen(
-            data: (images) => images.isNotEmpty
-                ? _buildStatusToolbar(context, images, isDark)
-                : const SizedBox.shrink(),
-            orElse: () => const SizedBox.shrink(),
-          ),
-
-          // Main content
-          Expanded(
-            child: galleryState.when(
-              loading: () => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(ApertixColors.cyanAccent),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Indexing images...',
-                      style: TextStyle(
-                        color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+          Column(
+            children: [
+              // Sub-header / Status Toolbar
+              galleryState.maybeWhen(
+                data: (images) => images.isNotEmpty
+                    ? _buildStatusToolbar(context, images, isDark)
+                    : const SizedBox.shrink(),
+                orElse: () => const SizedBox.shrink(),
               ),
-              error: (err, _) => _ErrorView(message: err.toString()),
-              data: (images) {
-                if (images.isEmpty) {
-                  return _EmptyState(onPickFolder: _pickFolder);
-                }
 
-                final processed = _processImages(images);
-                if (processed.isEmpty) {
-                  return Center(
+              // Main content
+              Expanded(
+                child: galleryState.when(
+                  loading: () => Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.search_off_rounded,
-                            size: 48,
-                            color: isDark ? Colors.white30 : Colors.black26),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'No images match the active filters',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        const SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(ApertixColors.cyanAccent),
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _searchQuery = '';
-                              _searchController.clear();
-                              _formatFilter = 'ALL';
-                            });
-                          },
-                          child: const Text('Reset filters'),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Indexing images...',
+                          style: TextStyle(
+                            color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
-                  );
-                }
+                  ),
+                  error: (err, _) => _ErrorView(message: err.toString()),
+                  data: (images) {
+                    if (images.isEmpty) {
+                      return _EmptyState(onPickFolder: _pickFolder);
+                    }
 
-                return _ThumbnailGrid(
-                  images: processed,
-                  allImages: images,
-                  tileSize: _getThumbnailSize(),
-                );
-              },
-            ),
+                    final processed = _processImages(images);
+                    if (processed.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search_off_rounded,
+                                size: 48,
+                                color: isDark ? Colors.white30 : Colors.black26),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No images match the active filters',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  _searchQuery = '';
+                                  _searchController.clear();
+                                  _formatFilter = 'ALL';
+                                });
+                              },
+                              child: const Text('Reset filters'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return _ThumbnailGrid(
+                      images: processed,
+                      allImages: images,
+                      tileSize: _getThumbnailSize(),
+                      selectedPaths: _selectedPaths,
+                      isSelectionMode: _isSelectionMode,
+                      onToggleSelect: _toggleSelect,
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
+
+          // Floating Batch Selection Dock
+          if (_isSelectionMode)
+            Positioned(
+              bottom: 24,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: galleryState.maybeWhen(
+                  data: (images) => _buildSelectionDock(context, _processImages(images), isDark),
+                  orElse: () => const SizedBox.shrink(),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSelectionDock(BuildContext context, List<ImageFile> currentImages, bool isDark) {
+    final count = _selectedPaths.length;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F121E).withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: ApertixColors.cyanAccent.withValues(alpha: 0.4), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Count badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: ApertixColors.cyanAccent.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$count Selected',
+                  style: const TextStyle(
+                    color: ApertixColors.cyanAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Select All / Deselect
+              TextButton(
+                onPressed: () {
+                  if (_selectedPaths.length == currentImages.length) {
+                    _clearSelection();
+                  } else {
+                    _selectAll(currentImages);
+                  }
+                },
+                child: Text(
+                  _selectedPaths.length == currentImages.length ? 'Deselect All' : 'Select All',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Launch Batch Processing Studio
+              FilledButton.icon(
+                icon: const Icon(Icons.bolt_rounded, size: 16),
+                label: const Text('Batch Process'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: ApertixColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  final changed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => BatchDialog(selectedFilePaths: _selectedPaths.toList()),
+                  );
+                  if (changed == true && mounted) {
+                    _clearSelection();
+                    ref.read(galleryProvider.notifier).refresh();
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+
+              // Dismiss selection
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18, color: Colors.white60),
+                tooltip: 'Exit Selection',
+                onPressed: _clearSelection,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -437,6 +582,51 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
 
           const Spacer(),
 
+          // Selection Mode Toggle Button
+          InkWell(
+            onTap: () {
+              if (_isSelectionMode) {
+                _clearSelection();
+              } else {
+                _selectAll(processed);
+              }
+            },
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _isSelectionMode
+                    ? ApertixColors.cyanAccent.withValues(alpha: 0.2)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: _isSelectionMode
+                      ? ApertixColors.cyanAccent
+                      : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.checklist_rounded,
+                    size: 14,
+                    color: _isSelectionMode ? ApertixColors.cyanAccent : (isDark ? Colors.white70 : Colors.black54),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _isSelectionMode ? 'Cancel Selection' : 'Select',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _isSelectionMode ? ApertixColors.cyanAccent : (isDark ? Colors.white70 : Colors.black87),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
           // Sort dropdown
           PopupMenuButton<_SortOption>(
             tooltip: 'Sort images',
@@ -528,6 +718,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
       dialogTitle: 'Select Image Folder',
     );
     if (folder != null && mounted) {
+      _clearSelection();
       ref.read(galleryProvider.notifier).loadFolder(folder);
     }
   }
@@ -558,16 +749,22 @@ class _ThumbnailGrid extends StatelessWidget {
     required this.images,
     required this.allImages,
     required this.tileSize,
+    required this.selectedPaths,
+    required this.isSelectionMode,
+    required this.onToggleSelect,
   });
 
   final List<ImageFile> images;
   final List<ImageFile> allImages;
   final double tileSize;
+  final Set<String> selectedPaths;
+  final bool isSelectionMode;
+  final void Function(String path) onToggleSelect;
 
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: tileSize,
         mainAxisSpacing: 12,
@@ -578,9 +775,13 @@ class _ThumbnailGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         final img = images[index];
         final globalIndex = allImages.indexWhere((f) => f.path == img.path);
+        final isSelected = selectedPaths.contains(img.path);
 
         return ImageThumbnail(
           imageFile: img,
+          isSelected: isSelected,
+          isSelectionMode: isSelectionMode,
+          onToggleSelect: () => onToggleSelect(img.path),
           onTap: () => context.push('/viewer', extra: {
             'filePath': img.path,
             'fileList': allImages.map((f) => f.path).toList(),

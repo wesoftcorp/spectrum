@@ -3,18 +3,24 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/sources/local/image_file_service.dart';
 
-/// Modern Nordic Frost thumbnail card with hover glow, badge pills, and crisp metadata.
+/// Modern Nordic Frost thumbnail card with hover glow, badge pills, and selection state.
 class ImageThumbnail extends StatefulWidget {
   const ImageThumbnail({
     super.key,
     required this.imageFile,
     required this.onTap,
+    this.isSelected = false,
+    this.isSelectionMode = false,
+    this.onToggleSelect,
     this.onQuickView,
     this.onQuickEdit,
   });
 
   final ImageFile imageFile;
   final VoidCallback onTap;
+  final bool isSelected;
+  final bool isSelectionMode;
+  final VoidCallback? onToggleSelect;
   final VoidCallback? onQuickView;
   final VoidCallback? onQuickEdit;
 
@@ -45,15 +51,19 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final ext = widget.imageFile.extension.toUpperCase();
     final badgeBg = _badgeColor(widget.imageFile.extension);
+    final isSelected = widget.isSelected;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: widget.isSelectionMode && widget.onToggleSelect != null
+            ? widget.onToggleSelect!
+            : widget.onTap,
+        onLongPress: widget.onToggleSelect,
         child: AnimatedScale(
-          scale: _isHovered ? 1.025 : 1.0,
+          scale: isSelected ? 0.96 : (_isHovered ? 1.025 : 1.0),
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           child: AnimatedContainer(
@@ -62,13 +72,21 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
               borderRadius: BorderRadius.circular(12),
               color: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
               border: Border.all(
-                color: _isHovered
-                    ? ApertixColors.cyanAccent.withValues(alpha: 0.8)
-                    : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
-                width: _isHovered ? 1.5 : 1.0,
+                color: isSelected
+                    ? ApertixColors.cyanAccent
+                    : (_isHovered
+                        ? ApertixColors.cyanAccent.withValues(alpha: 0.8)
+                        : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder)),
+                width: isSelected ? 2.5 : (_isHovered ? 1.5 : 1.0),
               ),
               boxShadow: [
-                if (_isHovered)
+                if (isSelected)
+                  BoxShadow(
+                    color: ApertixColors.cyanAccent.withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    spreadRadius: 2,
+                  )
+                else if (_isHovered)
                   BoxShadow(
                     color: ApertixColors.cyanAccent.withValues(alpha: 0.22),
                     blurRadius: 16,
@@ -105,7 +123,13 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
                   cacheHeight: 400,
                 ),
 
-                // Top Pills (Format badge & Quick Actions on hover)
+                // Selection tint overlay
+                if (isSelected)
+                  Container(
+                    color: ApertixColors.cyanAccent.withValues(alpha: 0.2),
+                  ),
+
+                // Top Pills (Format badge, Selection Checkbox, Hover Actions)
                 Positioned(
                   top: 8,
                   left: 8,
@@ -137,33 +161,28 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
                         ),
                       ),
 
-                      // Quick action hover capsule
-                      if (_isHovered)
-                        AnimatedOpacity(
-                          opacity: _isHovered ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 150),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      // Selection Checkbox or Hover Action Capsule
+                      if (widget.isSelectionMode || isSelected || _isHovered)
+                        GestureDetector(
+                          onTap: widget.onToggleSelect,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 26,
+                            height: 26,
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.white24, width: 0.5),
+                              shape: BoxShape.circle,
+                              color: isSelected
+                                  ? ApertixColors.cyanAccent
+                                  : Colors.black.withValues(alpha: 0.5),
+                              border: Border.all(
+                                color: isSelected ? ApertixColors.cyanAccent : Colors.white60,
+                                width: 1.5,
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (widget.onQuickEdit != null)
-                                  _HoverIconAction(
-                                    icon: Icons.tune_rounded,
-                                    tooltip: 'Edit',
-                                    onTap: widget.onQuickEdit!,
-                                  ),
-                                _HoverIconAction(
-                                  icon: Icons.open_in_full_rounded,
-                                  tooltip: 'Open',
-                                  onTap: widget.onTap,
-                                ),
-                              ],
+                            child: Center(
+                              child: isSelected
+                                  ? const Icon(Icons.check_rounded, size: 16, color: Colors.black)
+                                  : null,
                             ),
                           ),
                         ),
@@ -222,33 +241,6 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HoverIconAction extends StatelessWidget {
-  const _HoverIconAction({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Icon(icon, color: Colors.white, size: 14),
         ),
       ),
     );

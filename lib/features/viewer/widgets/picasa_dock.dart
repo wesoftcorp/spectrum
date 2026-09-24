@@ -123,10 +123,10 @@ class PicasaDock extends StatelessWidget {
               SizedBox(
                 width: 100,
                 child: SliderTheme(
-                  data: SliderThemeData(
+                  data: const SliderThemeData(
                     trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: RoundSliderOverlayShape(overlayRadius: 12),
                     activeTrackColor: ApertixColors.cyanAccent,
                     inactiveTrackColor: Colors.white24,
                     thumbColor: ApertixColors.cyanAccent,

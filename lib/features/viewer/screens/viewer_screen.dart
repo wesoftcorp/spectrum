@@ -10,10 +10,10 @@ import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/theme/app_theme.dart';
 import '../providers/viewer_provider.dart';
 import '../widgets/picasa_dock.dart';
 import '../widgets/thumbnail_strip.dart';
+import '../widgets/animation_controls_bar.dart';
 import '../../metadata/widgets/metadata_drawer.dart';
 
 /// Iconic Google Picasa-style borderless photo viewer player.
@@ -48,6 +48,16 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
   bool _showFilmstrip = false;
   bool _isPlayingSlideshow = false;
   Timer? _slideshowTimer;
+
+  // Animated Media state
+  bool _isAnimationPlaying = true;
+  double _animationSpeed = 1.0;
+
+  bool _isAnimatedMedia(String? path) {
+    if (path == null) return false;
+    final ext = p.extension(path).toLowerCase();
+    return ext == '.gif' || ext == '.apng';
+  }
 
   // Transformations
   final Map<int, int> _rotations = {}; // index -> quarter turns (0, 1, 2, 3)
@@ -210,7 +220,6 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(viewerProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
@@ -232,7 +241,6 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
               final currentIndex = viewerState.currentIndex;
               final currentPath = viewerState.currentPath;
               final fileName = currentPath != null ? p.basename(currentPath) : '';
-              final quarterTurns = _rotations[currentIndex] ?? 0;
 
               return Stack(
                 fit: StackFit.expand,
@@ -331,6 +339,24 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
                               ),
                             ),
                           ),
+                        ),
+                      ),
+                    ),
+
+                  // Animated Media Floating Controls (GIF / APNG)
+                  if (_isAnimatedMedia(currentPath))
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeInOut,
+                      bottom: _showUi ? (_showFilmstrip ? 170 : 86) : -80,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: AnimationControlsBar(
+                          isPlaying: _isAnimationPlaying,
+                          playbackSpeed: _animationSpeed,
+                          onTogglePlayPause: () => setState(() => _isAnimationPlaying = !_isAnimationPlaying),
+                          onSpeedChanged: (spd) => setState(() => _animationSpeed = spd),
                         ),
                       ),
                     ),

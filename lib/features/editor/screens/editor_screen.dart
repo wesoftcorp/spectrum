@@ -52,7 +52,6 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   Widget build(BuildContext context) {
     final editorState = ref.watch(editorProvider(widget.filePath));
     final notifier = ref.read(editorProvider(widget.filePath).notifier);
-    final colorScheme = Theme.of(context).colorScheme;
 
     final params = _comparingOriginal ? const EditorParameters() : editorState.currentParams;
     final colorMatrix = params.calculateColorMatrix();
