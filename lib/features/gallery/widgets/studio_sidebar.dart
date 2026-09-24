@@ -278,15 +278,12 @@ class StudioSidebar extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
-          // Glowing Iris Aperture Icon
+          // Official Apertix Cyber-Iris Logo (from Stitch)
           Container(
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [ApertixColors.cyanAccent, ApertixColors.primary],
-              ),
+              borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
                   color: ApertixColors.cyanAccent.withValues(alpha: 0.35),
@@ -295,11 +292,11 @@ class StudioSidebar extends ConsumerWidget {
                 ),
               ],
             ),
-            child: const Center(
-              child: Icon(
-                Icons.shutter_speed_rounded,
-                color: Colors.white,
-                size: 20,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/icons/apertix_logo.png',
+                fit: BoxFit.cover,
               ),
             ),
           ),

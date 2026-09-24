@@ -1294,28 +1294,25 @@ class _EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            // Glowing Aperture Icon
+            // Official Apertix Cyber-Iris Logo (from Stitch)
             Container(
-              width: 80,
-              height: 80,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    ApertixColors.cyanAccent.withValues(alpha: 0.2),
-                    ApertixColors.primary.withValues(alpha: 0.2),
-                  ],
-                ),
-                border: Border.all(
-                  color: ApertixColors.cyanAccent.withValues(alpha: 0.4),
-                  width: 2,
-                ),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: ApertixColors.cyanAccent.withValues(alpha: 0.35),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.shutter_speed_rounded,
-                  size: 42,
-                  color: ApertixColors.cyanAccent,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: Image.asset(
+                  'assets/icons/apertix_logo.png',
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
