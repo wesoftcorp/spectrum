@@ -53,75 +53,80 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
     final badgeBg = _badgeColor(widget.imageFile.extension);
     final isSelected = widget.isSelected;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.isSelectionMode && widget.onToggleSelect != null
-            ? widget.onToggleSelect!
-            : widget.onTap,
-        onLongPress: widget.onToggleSelect,
-        child: AnimatedScale(
-          scale: isSelected ? 0.96 : (_isHovered ? 1.025 : 1.0),
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          child: AnimatedContainer(
+    return RepaintBoundary(
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: widget.isSelectionMode && widget.onToggleSelect != null
+              ? widget.onToggleSelect!
+              : widget.onTap,
+          onLongPress: widget.onToggleSelect,
+          child: AnimatedScale(
+            scale: isSelected ? 0.96 : (_isHovered ? 1.025 : 1.0),
             duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
-              border: Border.all(
-                color: isSelected
-                    ? ApertixColors.primary
-                    : (_isHovered
-                        ? ApertixColors.primary.withValues(alpha: 0.6)
-                        : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder)),
-                width: isSelected ? 2.5 : (_isHovered ? 1.5 : 1.0),
+            curve: Curves.easeOutCubic,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isDark
+                    ? const Color(0xFF191D26).withValues(alpha: 0.8)
+                    : Colors.white.withValues(alpha: 0.85),
+                border: Border.all(
+                  color: isSelected
+                      ? ApertixColors.primary
+                      : (_isHovered
+                          ? ApertixColors.cyanAccent.withValues(alpha: 0.7)
+                          : (isDark
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.white.withValues(alpha: 0.65))),
+                  width: isSelected ? 2.5 : (_isHovered ? 1.5 : 1.0),
+                ),
+                boxShadow: [
+                  if (isSelected)
+                    BoxShadow(
+                      color: ApertixColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    )
+                  else if (_isHovered)
+                    BoxShadow(
+                      color: ApertixColors.cyanAccent.withValues(alpha: 0.2),
+                      blurRadius: 14,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 4),
+                    )
+                  else
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
               ),
-              boxShadow: [
-                if (isSelected)
-                  BoxShadow(
-                    color: ApertixColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 14,
-                    spreadRadius: 1,
-                  )
-                else if (_isHovered)
-                  BoxShadow(
-                    color: ApertixColors.primary.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 4),
-                  )
-                else
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Image layer
-                Image.file(
-                  File(widget.imageFile.path),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: isDark ? const Color(0xFF141724) : const Color(0xFFE2E8F0),
-                    child: Center(
-                      child: Icon(
-                        Icons.broken_image_rounded,
-                        color: isDark ? Colors.white38 : Colors.black38,
-                        size: 32,
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Image layer
+                  Image.file(
+                    File(widget.imageFile.path),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: isDark ? const Color(0xFF141724) : const Color(0xFFE2E8F0),
+                      child: Center(
+                        child: Icon(
+                          Icons.broken_image_rounded,
+                          color: isDark ? Colors.white38 : Colors.black38,
+                          size: 32,
+                        ),
                       ),
                     ),
+                    cacheWidth: 300,
+                    cacheHeight: 300,
                   ),
-                  cacheWidth: 400,
-                  cacheHeight: 400,
-                ),
 
                 // Selection tint overlay
                 if (isSelected)
@@ -239,6 +244,7 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
                   ),
                 ),
               ],
+            ),
             ),
           ),
         ),

@@ -4,26 +4,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:path/path.dart' as p;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/glass_container.dart';
+import '../../../core/widgets/glass_background.dart';
 import '../../../core/licensing/widgets/license_dialog.dart';
 import '../../../core/licensing/providers/license_provider.dart';
 import '../../../data/sources/platform/windows_shell_service.dart';
 import '../../../data/sources/local/image_file_service.dart';
 import '../providers/gallery_provider.dart';
 import '../widgets/image_thumbnail.dart';
+import '../widgets/studio_sidebar.dart';
 import '../../batch/widgets/batch_dialog.dart';
 import '../../collections/providers/collections_provider.dart';
+import '../../collections/models/album.dart';
 import '../../collections/widgets/album_picker_dialog.dart';
 import '../../cloud/widgets/cloud_vault_dialog.dart';
 
 enum _SortOption { nameAsc, nameDesc, dateNewest, dateOldest, sizeLargest }
 enum _GridDensity { compact, comfortable, large }
 
-/// Modern Nordic Frost & Cyber Luminescence Gallery Screen with Multi-Selection & Batch Processing.
+/// Modern Glassmorphism & High-Tech Studio Gallery Screen with Pro Feature Rail.
 class GalleryScreen extends ConsumerStatefulWidget {
   const GalleryScreen({super.key});
 
@@ -36,6 +39,8 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   _SortOption _sortOption = _SortOption.dateNewest;
   String _formatFilter = 'ALL';
   bool _favoritesFilter = false;
+  String? _activeAlbumId;
+  bool _isSidebarCollapsed = false;
   _GridDensity _density = _GridDensity.comfortable;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
@@ -72,13 +77,25 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     });
   }
 
-  List<ImageFile> _processImages(List<ImageFile> rawList) {
+  List<ImageFile> _processImages(
+    List<ImageFile> rawList,
+    Set<String> favorites,
+    List<Album> albums,
+  ) {
     var list = List<ImageFile>.from(rawList);
+
+    // Filter by active virtual album
+    if (_activeAlbumId != null) {
+      final activeAlbum = albums.where((a) => a.id == _activeAlbumId).firstOrNull;
+      if (activeAlbum != null) {
+        final albumPaths = activeAlbum.imagePaths.toSet();
+        list = list.where((img) => albumPaths.contains(img.path)).toList();
+      }
+    }
 
     // Filter by favorites
     if (_favoritesFilter) {
-      final favs = ref.watch(favoritesProvider);
-      list = list.where((img) => favs.contains(img.path)).toList();
+      list = list.where((img) => favorites.contains(img.path)).toList();
     }
 
     // Filter by format
@@ -134,115 +151,207 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   @override
   Widget build(BuildContext context) {
     final galleryState = ref.watch(galleryProvider);
+    final currentFolder = ref.watch(currentFolderProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final favorites = ref.watch(favoritesProvider);
+    final albums = ref.watch(albumsProvider);
+
+    final activeAlbum = _activeAlbumId != null
+        ? albums.where((a) => a.id == _activeAlbumId).firstOrNull
+        : null;
 
     return Scaffold(
-      backgroundColor: isDark ? ApertixColors.darkBackground : ApertixColors.lightBackground,
-      appBar: _buildTopAppBar(context, isDark),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Column(
-            children: [
-              // Sub-header / Status Toolbar
-              galleryState.maybeWhen(
-                data: (images) => images.isNotEmpty
-                    ? _buildStatusToolbar(context, images, isDark)
-                    : const SizedBox.shrink(),
-                orElse: () => const SizedBox.shrink(),
+      backgroundColor: isDark ? const Color(0xFF0D0F14) : const Color(0xFFF3F5FA),
+      body: GlassBackground(
+        child: Row(
+          children: [
+            // Glass Studio Sidebar on the left
+            StudioSidebar(
+              totalImagesCount: galleryState.maybeWhen(
+                data: (imgs) => imgs.length,
+                orElse: () => 0,
               ),
-
-              // Main content
-              Expanded(
-                child: galleryState.when(
-                  loading: () => Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 3,
-                            valueColor: AlwaysStoppedAnimation<Color>(ApertixColors.cyanAccent),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Indexing images...',
-                          style: TextStyle(
-                            color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  error: (err, _) => _ErrorView(message: err.toString()),
-                  data: (images) {
-                    if (images.isEmpty) {
-                      return _EmptyState(onPickFolder: _pickFolder);
-                    }
-
-                    final processed = _processImages(images);
-                    if (processed.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.search_off_rounded,
-                                size: 48,
-                                color: isDark ? Colors.white30 : Colors.black26),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'No images match the active filters',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _searchQuery = '';
-                                  _searchController.clear();
-                                  _formatFilter = 'ALL';
-                                });
-                              },
-                              child: const Text('Reset filters'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return _ThumbnailGrid(
-                      images: processed,
-                      allImages: images,
-                      tileSize: _getThumbnailSize(),
-                      selectedPaths: _selectedPaths,
-                      isSelectionMode: _isSelectionMode,
-                      onToggleSelect: _toggleSelect,
+              currentFolder: currentFolder,
+              isFavoritesActive: _favoritesFilter,
+              activeAlbumId: _activeAlbumId,
+              isCollapsed: _isSidebarCollapsed,
+              onToggleCollapse: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+              onShowAllPhotos: () {
+                setState(() {
+                  _favoritesFilter = false;
+                  _activeAlbumId = null;
+                });
+              },
+              onToggleFavorites: () {
+                setState(() {
+                  _favoritesFilter = !_favoritesFilter;
+                  _activeAlbumId = null;
+                });
+              },
+              onSelectAlbum: (albumId) {
+                setState(() {
+                  _activeAlbumId = albumId;
+                  _favoritesFilter = false;
+                });
+              },
+              onPickFolder: _pickFolder,
+              onPickFile: _pickFile,
+              onOpenBatchStudio: () {
+                galleryState.whenData((images) {
+                  if (images.isNotEmpty) {
+                    final targetPaths = _isSelectionMode
+                        ? _selectedPaths.toList()
+                        : images.map((f) => f.path).toList();
+                    showDialog(
+                      context: context,
+                      builder: (_) => BatchDialog(selectedFilePaths: targetPaths),
                     );
-                  },
-                ),
-              ),
-            ],
-          ),
+                  }
+                });
+              },
+              onOpenComparisonStudio: () {
+                galleryState.whenData((images) {
+                  if (images.length >= 2) {
+                    final selected = images.where((f) => _selectedPaths.contains(f.path)).toList();
+                    final pathA = selected.isNotEmpty ? selected[0].path : images[0].path;
+                    final pathB = selected.length >= 2 ? selected[1].path : images[1].path;
+                    context.push('/comparison', extra: {'imagePathA': pathA, 'imagePathB': pathB});
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('At least 2 images are required in folder to compare')),
+                    );
+                  }
+                });
+              },
+              onOpenCloudVault: () {
+                galleryState.whenData((images) {
+                  final targetPaths = _isSelectionMode
+                      ? _selectedPaths.toList()
+                      : images.map((f) => f.path).toList();
+                  showDialog(
+                    context: context,
+                    builder: (_) => CloudVaultDialog(filePaths: targetPaths),
+                  );
+                });
+              },
+              onOpenWindowsShell: _showWindowsShellSetupDialog,
+            ),
 
-          // Floating Batch Selection Dock
-          if (_isSelectionMode)
-            Positioned(
-              bottom: 24,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: galleryState.maybeWhen(
-                  data: (images) => _buildSelectionDock(_processImages(images), isDark),
-                  orElse: () => const SizedBox.shrink(),
-                ),
+            // Main Studio Content Area
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Column(
+                    children: [
+                      // Top Frosted Glass App Bar
+                      _buildTopAppBar(context, isDark, activeAlbum: activeAlbum),
+
+                      // Status & Filter Toolbar
+                      galleryState.maybeWhen(
+                        data: (images) => images.isNotEmpty
+                            ? _buildStatusToolbar(context, images, isDark, favorites, albums)
+                            : const SizedBox.shrink(),
+                        orElse: () => const SizedBox.shrink(),
+                      ),
+
+                      // Main Image Grid Area
+                      Expanded(
+                        child: galleryState.when(
+                          loading: () => Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    valueColor: AlwaysStoppedAnimation<Color>(ApertixColors.cyanAccent),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Indexing images...',
+                                  style: TextStyle(
+                                    color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          error: (err, _) => _ErrorView(message: err.toString()),
+                          data: (images) {
+                            if (images.isEmpty) {
+                              return _EmptyState(onPickFolder: _pickFolder);
+                            }
+
+                            final processed = _processImages(images, favorites, albums);
+                            if (processed.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.search_off_rounded,
+                                        size: 48,
+                                        color: isDark ? Colors.white30 : Colors.black26),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      'No images match the active filters',
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _searchQuery = '';
+                                          _searchController.clear();
+                                          _formatFilter = 'ALL';
+                                          _favoritesFilter = false;
+                                          _activeAlbumId = null;
+                                        });
+                                      },
+                                      child: const Text('Reset filters'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return _ThumbnailGrid(
+                              images: processed,
+                              allImages: images,
+                              tileSize: _getThumbnailSize(),
+                              selectedPaths: _selectedPaths,
+                              isSelectionMode: _isSelectionMode,
+                              onToggleSelect: _toggleSelect,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Floating Batch Selection Dock
+                  if (_isSelectionMode)
+                    Positioned(
+                      bottom: 24,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: galleryState.maybeWhen(
+                          data: (images) => _buildSelectionDock(_processImages(images, favorites, albums), isDark),
+                          orElse: () => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -257,12 +366,15 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: (isDark ? ApertixColors.darkSurfaceElevated : Colors.white).withValues(alpha: 0.92),
+            color: (isDark ? const Color(0xFF141722) : Colors.white).withValues(alpha: 0.80),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: ApertixColors.primary.withValues(alpha: 0.4), width: 1.2),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.16) : Colors.white.withValues(alpha: 0.75),
+              width: 1.2,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.12),
+                color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -408,193 +520,208 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     );
   }
 
-  PreferredSizeWidget _buildTopAppBar(BuildContext context, bool isDark) {
+  Widget _buildTopAppBar(BuildContext context, bool isDark, {Album? activeAlbum}) {
     final folderPath = ref.watch(currentFolderProvider);
     final folderName = folderPath != null ? p.basename(folderPath) : null;
+    final isPro = ref.watch(isProActiveProvider);
 
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(64),
-      child: Container(
-        decoration: BoxDecoration(
-          color: (isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface)
-              .withValues(alpha: 0.95),
-          border: Border(
-            bottom: BorderSide(
-              color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
-              width: 1,
-            ),
+    String currentContextTitle = 'Library';
+    IconData currentContextIcon = Icons.photo_library_outlined;
+    if (activeAlbum != null) {
+      currentContextTitle = 'Album: ${activeAlbum.name}';
+      currentContextIcon = Icons.collections_bookmark_rounded;
+    } else if (_favoritesFilter) {
+      currentContextTitle = 'Favorites';
+      currentContextIcon = Icons.favorite_rounded;
+    } else if (folderName != null) {
+      currentContextTitle = folderName;
+      currentContextIcon = Icons.folder_outlined;
+    }
+
+    return Container(
+      height: 60,
+      decoration: BoxDecoration(
+        color: (isDark ? const Color(0xFF13161F) : Colors.white).withValues(alpha: 0.70),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? Colors.white.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.6),
+            width: 1,
           ),
         ),
-        child: SafeArea(
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                // Brand Logo Badge
+                // If sidebar is collapsed, show quick toggle
+                if (_isSidebarCollapsed) ...[
+                  IconButton(
+                    icon: const Icon(Icons.menu_rounded, size: 20),
+                    tooltip: 'Expand Studio Rail',
+                    onPressed: () => setState(() => _isSidebarCollapsed = false),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+
+                // Current Context Pill (Breadcrumb)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [ApertixColors.cyanAccent, ApertixColors.primary],
-                    ),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ApertixColors.primary.withValues(alpha: 0.4),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : Colors.white.withValues(alpha: 0.6),
+                    ),
                   ),
-                  child: const Row(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.camera_rounded, color: Colors.white, size: 18),
-                      SizedBox(width: 6),
+                      Icon(
+                        currentContextIcon,
+                        size: 15,
+                        color: _favoritesFilter
+                            ? const Color(0xFFFF4757)
+                            : (isDark ? ApertixColors.cyanAccent : ApertixColors.primary),
+                      ),
+                      const SizedBox(width: 8),
                       Text(
-                        'APERTIX',
+                        currentContextTitle,
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
+                      if (activeAlbum != null || _favoritesFilter) ...[
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _activeAlbumId = null;
+                              _favoritesFilter = false;
+                            });
+                          },
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 14,
+                            color: isDark ? Colors.white60 : Colors.black54,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-
-                // Folder crumb pill
-                if (folderName != null) ...[
-                  Tooltip(
-                    message: folderPath!,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: isDark ? ApertixColors.darkCard : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.folder_outlined,
-                            size: 14,
-                            color: isDark ? ApertixColors.cyanAccent : ApertixColors.primary,
-                          ),
-                          const SizedBox(width: 6),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 180),
-                            child: Text(
-                              folderName,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
 
                 const Spacer(),
 
-                // Search field or search trigger
-                if (_isSearching)
-                  Container(
-                    width: 220,
-                    height: 36,
-                    margin: const EdgeInsets.only(right: 8),
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: true,
-                      style: const TextStyle(fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: 'Filter by filename...',
-                        hintStyle: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white38 : Colors.black38,
-                        ),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
+                // Action tools (flexible and scrollable horizontally on compact viewports)
+                Flexible(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    reverse: true,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Search field or search trigger
+                        if (_isSearching)
+                          Container(
+                            width: 200,
+                            height: 36,
+                            margin: const EdgeInsets.only(right: 8),
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              style: const TextStyle(fontSize: 13),
+                              decoration: InputDecoration(
+                                hintText: 'Filter by filename...',
+                                hintStyle: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white38 : Colors.black38,
+                                ),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
+                                  ),
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.close_rounded, size: 16),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isSearching = false;
+                                      _searchQuery = '';
+                                      _searchController.clear();
+                                    });
+                                  },
+                                ),
+                              ),
+                              onChanged: (val) => setState(() => _searchQuery = val),
+                            ),
+                          )
+                        else
+                          IconButton(
+                            icon: const Icon(Icons.search_rounded),
+                            tooltip: 'Search in folder',
+                            onPressed: () => setState(() => _isSearching = true),
                           ),
+
+                        // Open Folder CTA
+                        FilledButton.icon(
+                          icon: const Icon(Icons.folder_open_rounded, size: 16),
+                          label: const Text('Open Folder'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: ApertixColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                          onPressed: _pickFolder,
                         ),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 16),
-                          onPressed: () {
-                            setState(() {
-                              _isSearching = false;
-                              _searchQuery = '';
-                              _searchController.clear();
-                            });
-                          },
+                        const SizedBox(width: 6),
+
+                        // Open Single File
+                        IconButton(
+                          icon: const Icon(Icons.add_photo_alternate_outlined),
+                          tooltip: 'Open Image File',
+                          onPressed: _pickFile,
                         ),
-                      ),
-                      onChanged: (val) => setState(() => _searchQuery = val),
+
+                        // Apertix Pro License Status
+                        IconButton(
+                          icon: Icon(
+                            isPro ? Icons.verified_rounded : Icons.workspace_premium_rounded,
+                            color: isPro ? ApertixColors.secondary : ApertixColors.cyanAccent,
+                          ),
+                          tooltip: isPro ? 'Apertix Pro Active' : 'Unlock Apertix Pro',
+                          onPressed: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
+                        ),
+
+                        // Windows Shell Setup
+                        if (Platform.isWindows)
+                          IconButton(
+                            icon: const Icon(Icons.desktop_windows_rounded),
+                            tooltip: 'Windows Default App & Shell Setup',
+                            onPressed: _showWindowsShellSetupDialog,
+                          ),
+
+                        // Settings
+                        IconButton(
+                          icon: const Icon(Icons.settings_outlined),
+                          tooltip: 'Settings',
+                          onPressed: () => context.push('/settings'),
+                        ),
+                      ],
                     ),
-                  )
-                else
-                  IconButton(
-                    icon: const Icon(Icons.search_rounded),
-                    tooltip: 'Search in folder',
-                    onPressed: () => setState(() => _isSearching = true),
                   ),
-
-                // Open Folder CTA
-                FilledButton.icon(
-                  icon: const Icon(Icons.folder_open_rounded, size: 16),
-                  label: const Text('Open Folder'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: ApertixColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: _pickFolder,
-                ),
-                const SizedBox(width: 8),
-
-                // Open Single File
-                IconButton(
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
-                  tooltip: 'Open Image File',
-                  onPressed: _pickFile,
-                ),
-
-                // Apertix Pro License
-                IconButton(
-                  icon: Icon(
-                    ref.watch(isProActiveProvider) ? Icons.verified_rounded : Icons.workspace_premium_rounded,
-                    color: ref.watch(isProActiveProvider) ? ApertixColors.secondary : ApertixColors.cyanAccent,
-                  ),
-                  tooltip: ref.watch(isProActiveProvider) ? 'Apertix Pro Active' : 'Unlock Apertix Pro',
-                  onPressed: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
-                ),
-
-                // Windows Shell Setup
-                if (Platform.isWindows)
-                  IconButton(
-                    icon: const Icon(Icons.app_registration_rounded),
-                    tooltip: 'Windows Default App & Shell Setup',
-                    onPressed: _showWindowsShellSetupDialog,
-                  ),
-
-                // Settings
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined),
-                  tooltip: 'Settings',
-                  onPressed: () => context.push('/settings'),
                 ),
               ],
             ),
@@ -604,247 +731,263 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
     );
   }
 
-  Widget _buildStatusToolbar(BuildContext context, List<ImageFile> images, bool isDark) {
-    final processed = _processImages(images);
+  Widget _buildStatusToolbar(
+    BuildContext context,
+    List<ImageFile> images,
+    bool isDark,
+    Set<String> favorites,
+    List<Album> albums,
+  ) {
+    final processed = _processImages(images, favorites, albums);
     final totalBytes = images.fold<int>(0, (sum, f) => sum + f.sizeBytes);
     final totalSizeLabel = totalBytes < 1024 * 1024
         ? '${(totalBytes / 1024).toStringAsFixed(1)} KB'
         : '${(totalBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
       decoration: BoxDecoration(
-        color: (isDark ? ApertixColors.darkSurfaceElevated : const Color(0xFFF8FAFC)),
+        color: (isDark ? const Color(0xFF141722) : Colors.white).withValues(alpha: 0.65),
         border: Border(
           bottom: BorderSide(
-            color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
+            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.5),
             width: 1,
           ),
         ),
       ),
-      child: Row(
-        children: [
-          // Counter pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: ApertixColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              '${processed.length} of ${images.length} items • $totalSizeLabel',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: isDark ? ApertixColors.primaryLight : ApertixColors.primary,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Row(
+            children: [
+              // Counter pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: ApertixColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${processed.length} of ${images.length} items • $totalSizeLabel',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? ApertixColors.primaryLight : ApertixColors.primary,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-          // Format filters
-          Wrap(
-            spacing: 4,
-            children: ['ALL', 'JPG', 'PNG', 'WEBP', 'RAW'].map((fmt) {
-              final isSelected = _formatFilter == fmt;
-              return InkWell(
-                onTap: () => setState(() => _formatFilter = fmt),
+              // Format filters
+              Wrap(
+                spacing: 4,
+                children: ['ALL', 'JPG', 'PNG', 'WEBP', 'RAW'].map((fmt) {
+                  final isSelected = _formatFilter == fmt;
+                  return InkWell(
+                    onTap: () => setState(() => _formatFilter = fmt),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? ApertixColors.primary.withValues(alpha: isDark ? 0.25 : 0.15)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isSelected
+                              ? ApertixColors.primary
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Text(
+                        fmt,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                          color: isSelected
+                              ? (isDark ? ApertixColors.primaryLight : ApertixColors.primary)
+                              : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(width: 8),
+
+              // Favorites Filter Pill
+              InkWell(
+                onTap: () => setState(() {
+                  _favoritesFilter = !_favoritesFilter;
+                  _activeAlbumId = null;
+                }),
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? ApertixColors.primary.withValues(alpha: isDark ? 0.25 : 0.15)
+                    color: _favoritesFilter
+                        ? const Color(0xFFFF4757).withValues(alpha: 0.2)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: isSelected
-                          ? ApertixColors.primary
-                          : Colors.transparent,
+                      color: _favoritesFilter ? const Color(0xFFFF4757) : Colors.transparent,
                     ),
                   ),
-                  child: Text(
-                    fmt,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                      color: isSelected
-                          ? (isDark ? ApertixColors.primaryLight : ApertixColors.primary)
-                          : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _favoritesFilter ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        size: 13,
+                        color: _favoritesFilter ? const Color(0xFFFF4757) : (isDark ? Colors.white60 : Colors.black54),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'FAVORITES',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: _favoritesFilter ? FontWeight.w800 : FontWeight.w500,
+                          color: _favoritesFilter ? const Color(0xFFFF4757) : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(width: 8),
-
-          // Favorites Filter Pill
-          InkWell(
-            onTap: () => setState(() => _favoritesFilter = !_favoritesFilter),
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _favoritesFilter
-                    ? const Color(0xFFFF4757).withValues(alpha: 0.2)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: _favoritesFilter ? const Color(0xFFFF4757) : Colors.transparent,
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _favoritesFilter ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    size: 13,
-                    color: _favoritesFilter ? const Color(0xFFFF4757) : (isDark ? Colors.white60 : Colors.black54),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'FAVORITES',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: _favoritesFilter ? FontWeight.w800 : FontWeight.w500,
-                      color: _favoritesFilter ? const Color(0xFFFF4757) : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
+
+              const Spacer(),
+
+              // Selection Mode Toggle Button
+              InkWell(
+                onTap: () {
+                  if (_isSelectionMode) {
+                    _clearSelection();
+                  } else {
+                    _selectAll(processed);
+                  }
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _isSelectionMode
+                        ? ApertixColors.cyanAccent.withValues(alpha: 0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: _isSelectionMode
+                          ? ApertixColors.cyanAccent
+                          : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
                     ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.checklist_rounded,
+                        size: 14,
+                        color: _isSelectionMode ? ApertixColors.cyanAccent : (isDark ? Colors.white70 : Colors.black54),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _isSelectionMode ? 'Cancel Selection' : 'Select',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _isSelectionMode ? ApertixColors.cyanAccent : (isDark ? Colors.white70 : Colors.black87),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Sort dropdown
+              PopupMenuButton<_SortOption>(
+                tooltip: 'Sort images',
+                initialValue: _sortOption,
+                onSelected: (opt) => setState(() => _sortOption = opt),
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: _SortOption.dateNewest,
+                    child: Text('Date: Newest First'),
+                  ),
+                  const PopupMenuItem(
+                    value: _SortOption.dateOldest,
+                    child: Text('Date: Oldest First'),
+                  ),
+                  const PopupMenuItem(
+                    value: _SortOption.nameAsc,
+                    child: Text('Name: A to Z'),
+                  ),
+                  const PopupMenuItem(
+                    value: _SortOption.nameDesc,
+                    child: Text('Name: Z to A'),
+                  ),
+                  const PopupMenuItem(
+                    value: _SortOption.sizeLargest,
+                    child: Text('Size: Largest First'),
                   ),
                 ],
-              ),
-            ),
-          ),
-
-          const Spacer(),
-
-          // Selection Mode Toggle Button
-          InkWell(
-            onTap: () {
-              if (_isSelectionMode) {
-                _clearSelection();
-              } else {
-                _selectAll(processed);
-              }
-            },
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _isSelectionMode
-                    ? ApertixColors.cyanAccent.withValues(alpha: 0.2)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: _isSelectionMode
-                      ? ApertixColors.cyanAccent
-                      : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.checklist_rounded,
-                    size: 14,
-                    color: _isSelectionMode ? ApertixColors.cyanAccent : (isDark ? Colors.white70 : Colors.black54),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _isSelectionMode ? 'Cancel Selection' : 'Select',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: _isSelectionMode ? ApertixColors.cyanAccent : (isDark ? Colors.white70 : Colors.black87),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
                     ),
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.sort_rounded,
+                        size: 14,
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Sort',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
+              const SizedBox(width: 8),
 
-          // Sort dropdown
-          PopupMenuButton<_SortOption>(
-            tooltip: 'Sort images',
-            initialValue: _sortOption,
-            onSelected: (opt) => setState(() => _sortOption = opt),
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(
-                value: _SortOption.dateNewest,
-                child: Text('Date: Newest First'),
-              ),
-              const PopupMenuItem(
-                value: _SortOption.dateOldest,
-                child: Text('Date: Oldest First'),
-              ),
-              const PopupMenuItem(
-                value: _SortOption.nameAsc,
-                child: Text('Name: A to Z'),
-              ),
-              const PopupMenuItem(
-                value: _SortOption.nameDesc,
-                child: Text('Name: Z to A'),
-              ),
-              const PopupMenuItem(
-                value: _SortOption.sizeLargest,
-                child: Text('Size: Largest First'),
+              // Density toggle
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                icon: Icon(
+                  _density == _GridDensity.compact
+                      ? Icons.grid_view_rounded
+                      : (_density == _GridDensity.comfortable
+                          ? Icons.view_comfy_rounded
+                          : Icons.photo_size_select_actual_outlined),
+                  size: 18,
+                ),
+                tooltip: 'Toggle Grid Size',
+                onPressed: () {
+                  setState(() {
+                    switch (_density) {
+                      case _GridDensity.compact:
+                        _density = _GridDensity.comfortable;
+                      case _GridDensity.comfortable:
+                        _density = _GridDensity.large;
+                      case _GridDensity.large:
+                        _density = _GridDensity.compact;
+                    }
+                  });
+                },
               ),
             ],
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.sort_rounded,
-                    size: 14,
-                    color: isDark ? Colors.white70 : Colors.black54,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Sort',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
-          const SizedBox(width: 8),
-
-          // Density toggle
-          IconButton(
-            icon: Icon(
-              _density == _GridDensity.compact
-                  ? Icons.grid_view_rounded
-                  : (_density == _GridDensity.comfortable
-                      ? Icons.grid_4x4_rounded
-                      : Icons.photo_size_select_actual_outlined),
-              size: 18,
-            ),
-            tooltip: 'Toggle Grid Size',
-            onPressed: () {
-              setState(() {
-                switch (_density) {
-                  case _GridDensity.compact:
-                    _density = _GridDensity.comfortable;
-                  case _GridDensity.comfortable:
-                    _density = _GridDensity.large;
-                  case _GridDensity.large:
-                    _density = _GridDensity.compact;
-                }
-              });
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -957,6 +1100,8 @@ class _ThumbnailGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final allPaths = allImages.map((f) => f.path).toList();
+
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
@@ -978,14 +1123,11 @@ class _ThumbnailGrid extends StatelessWidget {
           onToggleSelect: () => onToggleSelect(img.path),
           onTap: () => context.push('/viewer', extra: {
             'filePath': img.path,
-            'fileList': allImages.map((f) => f.path).toList(),
+            'fileList': allPaths,
             'index': globalIndex < 0 ? 0 : globalIndex,
           }),
           onQuickEdit: () => context.push('/editor', extra: {'filePath': img.path}),
-        ).animate().fadeIn(
-              duration: 250.ms,
-              delay: (index * 15).clamp(0, 300).ms,
-            );
+        );
       },
     );
   }
@@ -1000,27 +1142,17 @@ class _EmptyState extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 480),
-        margin: const EdgeInsets.all(24),
+      child: GlassContainer(
+        blur: 20,
+        opacity: isDark ? 0.08 : 0.80,
+        borderRadius: BorderRadius.circular(24),
         padding: const EdgeInsets.all(36),
-        decoration: BoxDecoration(
-          color: isDark ? ApertixColors.darkCard : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.06),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        margin: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             // Glowing Aperture Icon
             Container(
               width: 80,
@@ -1090,8 +1222,9 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _ErrorView extends StatelessWidget {

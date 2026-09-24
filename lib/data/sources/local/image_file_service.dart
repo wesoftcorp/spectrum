@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'package:path/path.dart' as p;
 import '../../../core/constants/app_constants.dart';
 
@@ -40,18 +41,38 @@ class ImageFile {
 /// Service for discovering and navigating image files on the file system.
 class ImageFileService {
   /// Returns all supported image files in [folderPath], sorted by name.
+  /// Scans directory and file stats in a background isolate to eliminate UI stuttering.
   Future<List<ImageFile>> listImages(String folderPath) async {
+    return Isolate.run(() => _scanFolderIsolate(folderPath));
+  }
+
+  static List<ImageFile> _scanFolderIsolate(String folderPath) {
     final dir = Directory(folderPath);
     if (!dir.existsSync()) return [];
 
     final files = <ImageFile>[];
-    await for (final entity in dir.list()) {
-      if (entity is File && SupportedFormats.isSupported(entity.path)) {
-        files.add(ImageFile.fromFile(entity));
+    try {
+      final entities = dir.listSync(followLinks: false);
+      for (final entity in entities) {
+        if (entity is File && SupportedFormats.isSupported(entity.path)) {
+          try {
+            final stat = entity.statSync();
+            files.add(ImageFile(
+              path: entity.path,
+              name: p.basename(entity.path),
+              extension: p.extension(entity.path).replaceFirst('.', '').toLowerCase(),
+              sizeBytes: stat.size,
+              modifiedAt: stat.modified,
+            ));
+          } catch (_) {
+            // Ignore individual file lock/permission errors
+          }
+        }
       }
+      files.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    } catch (_) {
+      // In case of directory access errors
     }
-
-    files.sort((a, b) => a.name.compareTo(b.name));
     return files;
   }
 
