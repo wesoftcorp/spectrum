@@ -23,6 +23,7 @@ class PicasaDock extends StatelessWidget {
     required this.isFilmstripVisible,
     required this.onOpenEditor,
     required this.onOpenMetadata,
+    this.onOpenSocialHub,
     required this.onToggleFullscreen,
     required this.isFullscreen,
     required this.onClose,
@@ -45,6 +46,7 @@ class PicasaDock extends StatelessWidget {
   final bool isFilmstripVisible;
   final VoidCallback onOpenEditor;
   final VoidCallback onOpenMetadata;
+  final VoidCallback? onOpenSocialHub;
   final VoidCallback onToggleFullscreen;
   final bool isFullscreen;
   final VoidCallback onClose;
@@ -195,6 +197,15 @@ class PicasaDock extends StatelessWidget {
                 tooltip: 'EXIF Info (I)',
                 onTap: onOpenMetadata,
               ),
+
+              // Social Hub (Phase 6)
+              if (onOpenSocialHub != null)
+                _PicasaIconButton(
+                  icon: Icons.share_rounded,
+                  tooltip: 'Social Hub (S)',
+                  highlightColor: ApertixColors.cyanAccent,
+                  onTap: onOpenSocialHub!,
+                ),
 
               // Fullscreen
               _PicasaIconButton(

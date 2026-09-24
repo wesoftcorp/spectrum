@@ -3,6 +3,7 @@ import '../../data/sources/local/image_file_service.dart';
 import '../../data/sources/local/settings_service.dart';
 import '../../data/sources/local/file_watcher_service.dart';
 import '../../data/cache/image_cache_manager.dart';
+import '../../features/social/services/social_publish_service.dart';
 
 /// Isar database singleton provider (lazy / optional until Phase 3 schema).
 final isarProvider = Provider<dynamic>((ref) => null);
@@ -27,6 +28,11 @@ final fileWatcherServiceProvider = Provider<FileWatcherService>((ref) {
   final service = FileWatcherService();
   ref.onDispose(() => service.dispose());
   return service;
+});
+
+/// Social publishing service (Social Hub - Phase 6).
+final socialPublishServiceProvider = Provider<SocialPublishService>((ref) {
+  return SocialPublishService();
 });
 
 /// Bootstrap all providers that need async init.

@@ -11,6 +11,8 @@ import '../widgets/export_dialog.dart';
 import '../models/annotation_model.dart';
 import '../widgets/annotation_canvas.dart';
 import '../widgets/annotation_toolbar.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../social/widgets/social_hub_dialog.dart';
 
 enum _EditorTab { transform, adjust, filters, crop, annotate }
 
@@ -141,6 +143,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             tooltip: 'Redo',
             color: editorState.canRedo ? Colors.white : Colors.white24,
             onPressed: editorState.canRedo ? notifier.redo : null,
+          ),
+          const SizedBox(width: 8),
+
+          // Social Hub Publish
+          OutlinedButton.icon(
+            icon: const Icon(Icons.share_rounded, size: 14, color: ApertixColors.cyanAccent),
+            label: const Text('Social Hub'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: ApertixColors.cyanAccent,
+              side: const BorderSide(color: ApertixColors.cyanAccent, width: 1.2),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: editorState.isProcessing ? null : () => _handleSocialPublish(editorState, notifier),
           ),
           const SizedBox(width: 8),
 
@@ -585,5 +602,33 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         SnackBar(content: Text('Export failed: $e')),
       );
     }
+  }
+
+  Future<void> _handleSocialPublish(EditorState editorState, EditorNotifier notifier) async {
+    String publishPath = widget.filePath;
+    if (_annotations.isNotEmpty || editorState.currentParams.isModified) {
+      final naturalW = _imageNaturalSize?.width.round() ?? 1920;
+      final naturalH = _imageNaturalSize?.height.round() ?? 1080;
+      try {
+        publishPath = await notifier.saveImage(
+          targetWidth: naturalW,
+          targetHeight: naturalH,
+          quality: 95,
+          annotations: _annotations,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to prepare image: $e')),
+        );
+        return;
+      }
+    }
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => SocialHubDialog(imagePath: publishPath),
+    );
   }
 }

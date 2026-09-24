@@ -10,11 +10,13 @@ import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
 import '../providers/viewer_provider.dart';
 import '../widgets/picasa_dock.dart';
 import '../widgets/thumbnail_strip.dart';
 import '../widgets/animation_controls_bar.dart';
 import '../../metadata/widgets/metadata_drawer.dart';
+import '../../social/widgets/social_hub_dialog.dart';
 
 /// Iconic Google Picasa-style borderless photo viewer player.
 class ViewerScreen extends ConsumerStatefulWidget {
@@ -212,6 +214,15 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
     } catch (_) {}
   }
 
+  void _openSocialHub(String? currentPath) {
+    if (currentPath == null) return;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => SocialHubDialog(imagePath: currentPath),
+    );
+  }
+
   void _exitViewer() {
     _restoreStandardWindow();
     context.pop();
@@ -394,6 +405,7 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
                             }
                           },
                           onOpenMetadata: () => _scaffoldKey.currentState?.openEndDrawer(),
+                          onOpenSocialHub: currentPath != null ? () => _openSocialHub(currentPath) : null,
                           onToggleFullscreen: _toggleFullscreen,
                           isFullscreen: _isFullscreen,
                           onClose: _exitViewer,
@@ -472,6 +484,15 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
             ),
           ),
 
+          // Social Hub 1-tap launcher
+          IconButton(
+            icon: const Icon(Icons.share_rounded, color: ApertixColors.cyanAccent, size: 18),
+            tooltip: 'Social Hub (S)',
+            onPressed: () {
+              final currentPath = ref.read(viewerProvider).valueOrNull?.currentPath;
+              _openSocialHub(currentPath);
+            },
+          ),
           // Window Management controls (Minimize, Maximize, Close)
           IconButton(
             icon: const Icon(Icons.remove_rounded, color: Colors.white70, size: 18),
@@ -518,6 +539,9 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
         _toggleFullscreen();
       case LogicalKeyboardKey.keyI:
         _scaffoldKey.currentState?.openEndDrawer();
+      case LogicalKeyboardKey.keyS:
+        final currentPath = ref.read(viewerProvider).valueOrNull?.currentPath;
+        _openSocialHub(currentPath);
       case LogicalKeyboardKey.keyE:
         final current = ref.read(viewerProvider).valueOrNull?.currentPath;
         if (current != null) {
