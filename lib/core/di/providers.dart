@@ -6,6 +6,7 @@ import '../../data/cache/image_cache_manager.dart';
 import '../../features/social/services/social_publish_service.dart';
 import '../../features/social/services/token_vault_service.dart';
 import '../../features/social/services/publish_history_service.dart';
+import '../../features/social/services/publish_engine.dart';
 
 /// Isar database singleton provider (lazy / optional until Phase 3 schema).
 final isarProvider = Provider<dynamic>((ref) => null);
@@ -45,6 +46,13 @@ final tokenVaultServiceProvider = Provider<TokenVaultService>((ref) {
 /// Publish history audit service.
 final publishHistoryServiceProvider = Provider<PublishHistoryService>((ref) {
   return PublishHistoryService();
+});
+
+/// Parallel multi-platform publish engine (Phase 7).
+final publishEngineProvider = Provider<PublishEngine>((ref) {
+  final publishService = ref.watch(socialPublishServiceProvider);
+  final historyService = ref.watch(publishHistoryServiceProvider);
+  return PublishEngine(publishService: publishService, historyService: historyService);
 });
 
 /// Bootstrap all providers that need async init.

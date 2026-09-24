@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,9 @@ import 'package:path/path.dart' as p;
 import '../../../core/constants/app_constants.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/licensing/widgets/license_dialog.dart';
+import '../../../core/licensing/providers/license_provider.dart';
+import '../../../data/sources/platform/windows_shell_service.dart';
 import '../../../data/sources/local/image_file_service.dart';
 import '../providers/gallery_provider.dart';
 import '../widgets/image_thumbnail.dart';
@@ -492,6 +496,24 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   onPressed: _pickFile,
                 ),
 
+                // Apertix Pro License
+                IconButton(
+                  icon: Icon(
+                    ref.watch(isProActiveProvider) ? Icons.verified_rounded : Icons.workspace_premium_rounded,
+                    color: ref.watch(isProActiveProvider) ? ApertixColors.secondary : ApertixColors.cyanAccent,
+                  ),
+                  tooltip: ref.watch(isProActiveProvider) ? 'Apertix Pro Active' : 'Unlock Apertix Pro',
+                  onPressed: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
+                ),
+
+                // Windows Shell Setup
+                if (Platform.isWindows)
+                  IconButton(
+                    icon: const Icon(Icons.app_registration_rounded),
+                    tooltip: 'Windows Default App & Shell Setup',
+                    onPressed: _showWindowsShellSetupDialog,
+                  ),
+
                 // Settings
                 IconButton(
                   icon: const Icon(Icons.settings_outlined),
@@ -741,6 +763,62 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
         'index': index < 0 ? 0 : index,
       });
     }
+  }
+
+  Future<void> _showWindowsShellSetupDialog() async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF10131E),
+        title: const Row(
+          children: [
+            Icon(Icons.desktop_windows_rounded, color: ApertixColors.cyanAccent, size: 20),
+            SizedBox(width: 8),
+            Text('Windows File Associations', style: TextStyle(color: Colors.white, fontSize: 16)),
+          ],
+        ),
+        content: const Text(
+          'Configure Apertix as your primary image player for JPEG, PNG, WebP, GIF, BMP, RAW, and 80+ media formats.\n\nYou can open Windows Default Apps settings or export a customized registry (.reg) script to your Desktop.',
+          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.file_download_outlined, size: 14),
+            label: const Text('Export .reg File'),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              try {
+                final path = await WindowsShellService.generateRegistryFile();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Registry file generated: $path')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed: $e')),
+                  );
+                }
+              }
+            },
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.settings_rounded, size: 14),
+            label: const Text('Open Default Apps'),
+            style: FilledButton.styleFrom(backgroundColor: ApertixColors.primary),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              WindowsShellService.openDefaultAppsSettings();
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
 

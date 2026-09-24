@@ -17,6 +17,8 @@ import '../widgets/thumbnail_strip.dart';
 import '../widgets/animation_controls_bar.dart';
 import '../../metadata/widgets/metadata_drawer.dart';
 import '../../social/widgets/social_hub_dialog.dart';
+import '../../../core/licensing/widgets/license_dialog.dart';
+import '../../../core/licensing/providers/license_provider.dart';
 
 /// Iconic Google Picasa-style borderless photo viewer player.
 class ViewerScreen extends ConsumerStatefulWidget {
@@ -493,6 +495,18 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
               _openSocialHub(currentPath);
             },
           ),
+
+          // Apertix Pro License
+          IconButton(
+            icon: Icon(
+              ref.watch(isProActiveProvider) ? Icons.verified_rounded : Icons.workspace_premium_rounded,
+              color: ref.watch(isProActiveProvider) ? ApertixColors.secondary : ApertixColors.primaryLight,
+              size: 18,
+            ),
+            tooltip: ref.watch(isProActiveProvider) ? 'Apertix Pro Active' : 'Unlock Apertix Pro',
+            onPressed: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
+          ),
+
           // Window Management controls (Minimize, Maximize, Close)
           IconButton(
             icon: const Icon(Icons.remove_rounded, color: Colors.white70, size: 18),

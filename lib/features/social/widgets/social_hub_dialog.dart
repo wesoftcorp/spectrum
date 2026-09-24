@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import '../../../core/theme/app_theme.dart';
+import '../../../core/di/providers.dart';
 import '../models/social_platform.dart';
 import '../providers/social_hub_provider.dart';
+import '../services/publish_engine.dart';
 
 /// Nordic Glass Social Hub dialog modal for cross-platform publishing, framing, and captioning.
 class SocialHubDialog extends ConsumerStatefulWidget {
@@ -21,6 +23,10 @@ class SocialHubDialog extends ConsumerStatefulWidget {
 
 class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
   bool _showHistory = false;
+  bool _isMultiPublishMode = false;
+  bool _isPublishingMulti = false;
+  final Set<SocialPlatform> _multiPublishTargets = {SocialPlatform.instagram};
+  final Map<SocialPlatform, PlatformDispatchState> _dispatchStates = {};
   late final TextEditingController _captionController;
   late final TextEditingController _altTextController;
   late final TextEditingController _discordWebhookController;
@@ -124,6 +130,10 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
                 ),
               ),
 
+            // Live Dispatch Progress HUD if dispatching or recently dispatched
+            if (_dispatchStates.isNotEmpty)
+              _buildDispatchHUD(),
+
             // Bottom Action Dock
             _buildBottomDock(state, notifier),
           ],
@@ -196,6 +206,40 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
                 ],
               ),
               const Spacer(),
+              // Multi-Publish Mode Toggle
+              InkWell(
+                onTap: () => setState(() => _isMultiPublishMode = !_isMultiPublishMode),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _isMultiPublishMode
+                        ? const Color(0xFF6C5CE7).withValues(alpha: 0.25)
+                        : Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _isMultiPublishMode ? const Color(0xFF6C5CE7) : Colors.white12,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.hub_rounded, size: 13, color: _isMultiPublishMode ? const Color(0xFF6C5CE7) : Colors.white70),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Multi-Publish',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: _isMultiPublishMode ? FontWeight.w700 : FontWeight.w500,
+                          color: _isMultiPublishMode ? Colors.white : Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
               // History / Studio Toggle
               IconButton(
                 icon: Icon(
@@ -220,11 +264,28 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: SocialPlatform.values.map((p) {
-                final isSelected = p == currentPlatform;
+                final isSelected = _isMultiPublishMode
+                    ? _multiPublishTargets.contains(p)
+                    : p == currentPlatform;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: InkWell(
-                    onTap: () => notifier.setPlatform(p),
+                    onTap: () {
+                      if (_isMultiPublishMode) {
+                        setState(() {
+                          if (_multiPublishTargets.contains(p)) {
+                            if (_multiPublishTargets.length > 1) {
+                              _multiPublishTargets.remove(p);
+                            }
+                          } else {
+                            _multiPublishTargets.add(p);
+                          }
+                        });
+                        notifier.setPlatform(p);
+                      } else {
+                        notifier.setPlatform(p);
+                      }
+                    },
                     borderRadius: BorderRadius.circular(20),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
@@ -243,6 +304,14 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (_isMultiPublishMode) ...[
+                            Icon(
+                              isSelected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                              size: 13,
+                              color: isSelected ? Colors.white : Colors.white54,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
                           Icon(p.icon, size: 14, color: isSelected ? Colors.white : Colors.white70),
                           const SizedBox(width: 6),
                           Text(
@@ -697,7 +766,20 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
           const SizedBox(width: 10),
 
           // Dedicated Webhook / Bot Action if Discord or Telegram
-          if (platform == SocialPlatform.discord)
+          if (_isMultiPublishMode && _multiPublishTargets.length > 1)
+            FilledButton.icon(
+              icon: _isPublishingMulti
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.bolt_rounded, size: 16),
+              label: Text('Publish to ${_multiPublishTargets.length} Platforms'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF6C5CE7),
+                foregroundColor: Colors.white,
+                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+              onPressed: _isPublishingMulti ? null : () => _handleMultiPublish(state),
+            )
+          else if (platform == SocialPlatform.discord)
             FilledButton.icon(
               icon: const Icon(Icons.send_rounded, size: 14),
               label: const Text('Post via Webhook'),
@@ -740,6 +822,66 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
         ],
       ),
     );
+  }
+
+  Widget _buildDispatchHUD() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      color: Colors.black.withValues(alpha: 0.6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: _multiPublishTargets.map((p) {
+            final st = _dispatchStates[p]?.status ?? DispatchStatus.idle;
+            return Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(p.icon, size: 13, color: p.brandColor),
+                  const SizedBox(width: 4),
+                  Text(p.name, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                  const SizedBox(width: 4),
+                  if (st == DispatchStatus.inProgress)
+                    const SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white))
+                  else if (st == DispatchStatus.success)
+                    const Icon(Icons.check_circle_rounded, size: 13, color: ApertixColors.secondary)
+                  else if (st == DispatchStatus.failed)
+                    const Icon(Icons.error_outline_rounded, size: 13, color: Colors.redAccent)
+                  else if (st == DispatchStatus.queued)
+                    const Icon(Icons.hourglass_empty_rounded, size: 13, color: Colors.white38),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleMultiPublish(SocialHubState state) async {
+    setState(() {
+      _isPublishingMulti = true;
+      _dispatchStates.clear();
+    });
+
+    final engine = ref.read(publishEngineProvider);
+    await engine.publishMulti(
+      draft: state.draft,
+      targetPlatforms: _multiPublishTargets,
+      onProgress: (platform, dispatchState) {
+        if (mounted) {
+          setState(() {
+            _dispatchStates[platform] = dispatchState;
+          });
+        }
+      },
+    );
+
+    if (mounted) {
+      setState(() => _isPublishingMulti = false);
+      ref.read(socialHubProvider(widget.imagePath).notifier).loadHistory();
+    }
   }
 
   Widget _buildHistoryView(SocialHubState state) {
