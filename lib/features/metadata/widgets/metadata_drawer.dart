@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
+import '../../../core/theme/app_theme.dart';
 import '../models/image_metadata.dart';
 import '../providers/metadata_provider.dart';
 import '../services/metadata_service.dart';
@@ -14,10 +15,13 @@ class MetadataDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final metadataAsync = ref.watch(imageMetadataProvider(filePath));
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
 
     return Drawer(
       width: 380,
-      backgroundColor: const Color(0xFF0F121D),
+      backgroundColor: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(20),
@@ -35,35 +39,35 @@ class MetadataDrawer extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00F2FE).withValues(alpha: 0.15),
+                      color: ApertixColors.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
                       Icons.camera_alt_outlined,
                       size: 18,
-                      color: Color(0xFF00F2FE),
+                      color: ApertixColors.primary,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'EXIF & Image Inspector',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: colorScheme.onSurface,
                       letterSpacing: 0.2,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                    icon: Icon(Icons.close_rounded, color: colorScheme.onSurfaceVariant),
                     tooltip: 'Close',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1, color: Color(0xFF1F243B)),
+            Divider(height: 1, color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
 
             // Content
             Expanded(
@@ -71,16 +75,16 @@ class MetadataDrawer extends ConsumerWidget {
                 loading: () => const Center(
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00F2FE)),
+                    valueColor: AlwaysStoppedAnimation<Color>(ApertixColors.primary),
                   ),
                 ),
                 error: (err, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text('Failed to read EXIF: $err', style: const TextStyle(color: Colors.redAccent)),
+                    child: Text('Failed to read EXIF: $err', style: const TextStyle(color: ApertixColors.error)),
                   ),
                 ),
-                data: (meta) => _buildMetadataList(context, ref, meta),
+                data: (meta) => _buildMetadataList(context, ref, meta, isDark, colorScheme),
               ),
             ),
           ],
@@ -89,7 +93,13 @@ class MetadataDrawer extends ConsumerWidget {
     );
   }
 
-  Widget _buildMetadataList(BuildContext context, WidgetRef ref, ImageMetadata meta) {
+  Widget _buildMetadataList(
+    BuildContext context,
+    WidgetRef ref,
+    ImageMetadata meta,
+    bool isDark,
+    ColorScheme colorScheme,
+  ) {
     return ListView(
       padding: const EdgeInsets.all(18),
       children: [
@@ -98,13 +108,18 @@ class MetadataDrawer extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF15192B), Color(0xFF1A1F36)],
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF181C28), const Color(0xFF202638)]
+                    : [const Color(0xFFEEF2F7), const Color(0xFFE2E8F0)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF293252), width: 1),
+              border: Border.all(
+                color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
+                width: 1,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,15 +129,15 @@ class MetadataDrawer extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Row(
                       children: [
-                        const Icon(Icons.photo_camera_rounded, size: 14, color: Color(0xFF00F2FE)),
+                        const Icon(Icons.photo_camera_rounded, size: 14, color: ApertixColors.primary),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             meta.cameraModel!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: colorScheme.onSurface,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -133,10 +148,10 @@ class MetadataDrawer extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildHudMetric('SHUTTER', meta.shutterSpeed != null ? '${meta.shutterSpeed}s' : '—'),
-                    _buildHudMetric('APERTURE', meta.aperture != null ? 'ƒ/${meta.aperture}' : '—'),
-                    _buildHudMetric('ISO', meta.iso ?? '—'),
-                    _buildHudMetric('FOCAL', meta.focalLength != null ? '${meta.focalLength}mm' : '—'),
+                    _buildHudMetric('SHUTTER', meta.shutterSpeed != null ? '${meta.shutterSpeed}s' : '—', isDark, colorScheme),
+                    _buildHudMetric('APERTURE', meta.aperture != null ? 'ƒ/${meta.aperture}' : '—', isDark, colorScheme),
+                    _buildHudMetric('ISO', meta.iso ?? '—', isDark, colorScheme),
+                    _buildHudMetric('FOCAL', meta.focalLength != null ? '${meta.focalLength}mm' : '—', isDark, colorScheme),
                   ],
                 ),
               ],
@@ -147,27 +162,27 @@ class MetadataDrawer extends ConsumerWidget {
 
         // File Overview
         _buildSectionHeader('File Properties'),
-        _buildMetaTile('Name', p.basename(meta.filePath)),
-        _buildMetaTile('Size', meta.formattedFileSize),
-        if (meta.dimensions != null) _buildMetaTile('Dimensions', meta.dimensions!),
-        _buildMetaTile('Modified', meta.lastModified.toString().split('.')[0]),
+        _buildMetaTile('Name', p.basename(meta.filePath), colorScheme),
+        _buildMetaTile('Size', meta.formattedFileSize, colorScheme),
+        if (meta.dimensions != null) _buildMetaTile('Dimensions', meta.dimensions!, colorScheme),
+        _buildMetaTile('Modified', meta.lastModified.toString().split('.')[0], colorScheme),
         const SizedBox(height: 16),
 
         // Camera Details
         if (meta.hasCameraInfo) ...[
           _buildSectionHeader('Camera & Equipment'),
-          if (meta.cameraMake != null) _buildMetaTile('Make', meta.cameraMake!),
-          if (meta.cameraModel != null) _buildMetaTile('Model', meta.cameraModel!),
-          if (meta.lensModel != null) _buildMetaTile('Lens', meta.lensModel!),
-          if (meta.software != null) _buildMetaTile('Software', meta.software!),
+          if (meta.cameraMake != null) _buildMetaTile('Make', meta.cameraMake!, colorScheme),
+          if (meta.cameraModel != null) _buildMetaTile('Model', meta.cameraModel!, colorScheme),
+          if (meta.lensModel != null) _buildMetaTile('Lens', meta.lensModel!, colorScheme),
+          if (meta.software != null) _buildMetaTile('Software', meta.software!, colorScheme),
           const SizedBox(height: 16),
         ],
 
         // Location / GPS
         if (meta.hasGps) ...[
           _buildSectionHeader('GPS Location'),
-          _buildMetaTile('Coordinates', '${meta.gpsLatitude!.toStringAsFixed(6)}, ${meta.gpsLongitude!.toStringAsFixed(6)}'),
-          if (meta.gpsAltitude != null) _buildMetaTile('Altitude', '${meta.gpsAltitude!.toStringAsFixed(1)} m'),
+          _buildMetaTile('Coordinates', '${meta.gpsLatitude!.toStringAsFixed(6)}, ${meta.gpsLongitude!.toStringAsFixed(6)}', colorScheme),
+          if (meta.gpsAltitude != null) _buildMetaTile('Altitude', '${meta.gpsAltitude!.toStringAsFixed(1)} m', colorScheme),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             icon: const Icon(Icons.shield_outlined, size: 16),
@@ -180,13 +195,13 @@ class MetadataDrawer extends ConsumerWidget {
         // Raw EXIF Tags
         if (meta.rawTags.isNotEmpty) ...[
           _buildSectionHeader('All EXIF Tags (${meta.rawTags.length})'),
-          ...meta.rawTags.entries.take(30).map((e) => _buildMetaTile(e.key, e.value)),
+          ...meta.rawTags.entries.take(30).map((e) => _buildMetaTile(e.key, e.value, colorScheme)),
         ],
       ],
     );
   }
 
-  Widget _buildHudMetric(String label, String value) {
+  Widget _buildHudMetric(String label, String value, bool isDark, ColorScheme colorScheme) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -195,7 +210,7 @@ class MetadataDrawer extends ConsumerWidget {
           style: const TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF00F2FE),
+            color: ApertixColors.primary,
             letterSpacing: 0.8,
           ),
         ),
@@ -203,16 +218,19 @@ class MetadataDrawer extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.white12, width: 0.5),
+            border: Border.all(
+              color: isDark ? Colors.white12 : ApertixColors.lightBorder,
+              width: 0.5,
+            ),
           ),
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: colorScheme.onSurface,
             ),
           ),
         ),
@@ -228,14 +246,14 @@ class MetadataDrawer extends ConsumerWidget {
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF00F2FE),
+          color: ApertixColors.primary,
           letterSpacing: 0.8,
         ),
       ),
     );
   }
 
-  Widget _buildMetaTile(String label, String value) {
+  Widget _buildMetaTile(String label, String value, ColorScheme colorScheme) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -245,13 +263,13 @@ class MetadataDrawer extends ConsumerWidget {
             width: 110,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.white60),
+              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
             ),
           ),
           Expanded(
             child: SelectableText(
               value,
-              style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 12, color: colorScheme.onSurface, fontWeight: FontWeight.w500),
             ),
           ),
         ],

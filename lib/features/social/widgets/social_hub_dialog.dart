@@ -80,7 +80,7 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
         width: 880,
         height: 660,
         decoration: BoxDecoration(
-          color: const Color(0xFF0D101C).withValues(alpha: 0.96),
+          color: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: platform.brandColor.withValues(alpha: 0.35),
@@ -143,13 +143,15 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
   }
 
   Widget _buildTopBar(SocialPlatform currentPlatform, SocialHubNotifier notifier) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF141829),
+        color: isDark ? ApertixColors.darkSurfaceElevated : ApertixColors.lightSurfaceElevated,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          bottom: BorderSide(color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
         ),
       ),
       child: Column(
@@ -683,14 +685,15 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
 
   Widget _buildBottomDock(SocialHubState state, SocialHubNotifier notifier) {
     final platform = state.draft.platform;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF141829),
+        color: isDark ? ApertixColors.darkSurfaceElevated : ApertixColors.lightSurfaceElevated,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
         border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          top: BorderSide(color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
         ),
       ),
       child: Row(

@@ -56,6 +56,8 @@ class PicasaDock extends StatelessWidget {
     final canPrev = currentIndex > 0;
     final canNext = currentIndex < totalCount - 1;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(32),
       child: BackdropFilter(
@@ -63,24 +65,27 @@ class PicasaDock extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF0C0E17).withValues(alpha: 0.82),
+            color: isDark
+                ? ApertixColors.darkSurfaceElevated.withValues(alpha: 0.88)
+                : Colors.white.withValues(alpha: 0.90),
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.16),
+              color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
               width: 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.55),
+                color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
                 blurRadius: 28,
                 spreadRadius: 2,
                 offset: const Offset(0, 8),
               ),
-              BoxShadow(
-                color: ApertixColors.cyanAccent.withValues(alpha: 0.12),
-                blurRadius: 20,
-                spreadRadius: -4,
-              ),
+              if (isDark)
+                BoxShadow(
+                  color: ApertixColors.primary.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  spreadRadius: -4,
+                ),
             ],
           ),
           child: Row(
@@ -125,13 +130,13 @@ class PicasaDock extends StatelessWidget {
               SizedBox(
                 width: 100,
                 child: SliderTheme(
-                  data: const SliderThemeData(
+                  data: SliderThemeData(
                     trackHeight: 3,
-                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
-                    overlayShape: RoundSliderOverlayShape(overlayRadius: 12),
-                    activeTrackColor: ApertixColors.cyanAccent,
-                    inactiveTrackColor: Colors.white24,
-                    thumbColor: ApertixColors.cyanAccent,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                    activeTrackColor: ApertixColors.primary,
+                    inactiveTrackColor: isDark ? Colors.white24 : Colors.black12,
+                    thumbColor: ApertixColors.primary,
                   ),
                   child: Slider(
                     value: zoomLevel.clamp(0.5, 4.0),
@@ -233,10 +238,15 @@ class PicasaDock extends StatelessWidget {
   }
 
   Widget _buildDivider() {
-    return Container(
-      width: 1,
-      height: 20,
-      color: Colors.white.withValues(alpha: 0.15),
+    return Builder(
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          width: 1,
+          height: 20,
+          color: isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.10),
+        );
+      },
     );
   }
 }
@@ -257,6 +267,8 @@ class _CircularNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -271,19 +283,21 @@ class _CircularNavButton extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: enabled
-                  ? Colors.white.withValues(alpha: 0.1)
-                  : Colors.white.withValues(alpha: 0.03),
+                  ? (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05))
+                  : (isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02)),
               border: Border.all(
                 color: enabled
-                    ? Colors.white.withValues(alpha: 0.22)
-                    : Colors.white.withValues(alpha: 0.06),
+                    ? (isDark ? Colors.white.withValues(alpha: 0.22) : Colors.black.withValues(alpha: 0.12))
+                    : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
                 width: 1,
               ),
             ),
             child: Center(
               child: Icon(
                 icon,
-                color: enabled ? Colors.white : Colors.white24,
+                color: enabled
+                    ? (isDark ? Colors.white : ApertixColors.lightTextPrimary)
+                    : (isDark ? Colors.white24 : Colors.black26),
                 size: 26,
               ),
             ),
@@ -310,6 +324,8 @@ class _PicasaPillButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -323,19 +339,21 @@ class _PicasaPillButton extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               color: isActive
-                  ? ApertixColors.cyanAccent.withValues(alpha: 0.25)
-                  : Colors.white.withValues(alpha: 0.08),
+                  ? ApertixColors.primary.withValues(alpha: 0.2)
+                  : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
               border: Border.all(
                 color: isActive
-                    ? ApertixColors.cyanAccent
-                    : Colors.white.withValues(alpha: 0.18),
+                    ? ApertixColors.primary
+                    : (isDark ? Colors.white.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.1)),
                 width: 1,
               ),
             ),
             child: Text(
               label,
               style: TextStyle(
-                color: isActive ? ApertixColors.cyanAccent : Colors.white,
+                color: isActive
+                    ? ApertixColors.primary
+                    : (isDark ? Colors.white : ApertixColors.lightTextPrimary),
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0.5,
@@ -366,6 +384,9 @@ class _PicasaIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultIconColor = isDark ? Colors.white.withValues(alpha: 0.88) : ApertixColors.lightTextPrimary;
+
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -373,12 +394,12 @@ class _PicasaIconButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(20),
-          hoverColor: hoverBgColor ?? (highlightColor ?? Colors.white).withValues(alpha: 0.15),
+          hoverColor: hoverBgColor ?? (highlightColor ?? defaultIconColor).withValues(alpha: 0.15),
           child: Padding(
             padding: const EdgeInsets.all(7),
             child: Icon(
               icon,
-              color: highlightColor ?? Colors.white.withValues(alpha: 0.88),
+              color: highlightColor ?? defaultIconColor,
               size: 19,
             ),
           ),

@@ -41,6 +41,10 @@ class ShortcutsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: ClipRRect(
@@ -52,9 +56,16 @@ class ShortcutsDialog extends StatelessWidget {
             constraints: const BoxConstraints(maxHeight: 620),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF0D101A).withValues(alpha: 0.94),
+              color: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+              border: Border.all(color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -63,12 +74,12 @@ class ShortcutsDialog extends StatelessWidget {
                 // Header
                 Row(
                   children: [
-                    const Icon(Icons.keyboard_rounded, color: ApertixColors.cyanAccent, size: 22),
+                    const Icon(Icons.keyboard_rounded, color: ApertixColors.primary, size: 22),
                     const SizedBox(width: 10),
-                    const Text(
+                    Text(
                       'Keyboard Shortcuts',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: colorScheme.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.4,
@@ -76,7 +87,7 @@ class ShortcutsDialog extends StatelessWidget {
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                      icon: Icon(Icons.close_rounded, color: colorScheme.onSurfaceVariant, size: 20),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -97,7 +108,7 @@ class ShortcutsDialog extends StatelessWidget {
                               Text(
                                 group['group'] as String,
                                 style: const TextStyle(
-                                  color: ApertixColors.cyanAccent,
+                                  color: ApertixColors.primary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 1.2,
@@ -111,14 +122,14 @@ class ShortcutsDialog extends StatelessWidget {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.08),
+                                            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                                             borderRadius: BorderRadius.circular(6),
-                                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                                            border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.15) : ApertixColors.lightBorder),
                                           ),
                                           child: Text(
                                             item['key']!,
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                            style: TextStyle(
+                                              color: colorScheme.onSurface,
                                               fontSize: 11,
                                               fontWeight: FontWeight.w700,
                                               fontFamily: 'monospace',
@@ -129,7 +140,7 @@ class ShortcutsDialog extends StatelessWidget {
                                         Expanded(
                                           child: Text(
                                             item['desc']!,
-                                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                                           ),
                                         ),
                                       ],

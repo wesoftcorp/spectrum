@@ -33,6 +33,9 @@ class ViewerToolbar extends StatelessWidget {
     final count = viewerState.filePaths.length;
     final index = viewerState.currentIndex + 1;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -43,15 +46,15 @@ class ViewerToolbar extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF10131E).withValues(alpha: 0.8),
+                color: (isDark ? ApertixColors.darkSurfaceElevated : Colors.white).withValues(alpha: isDark ? 0.85 : 0.90),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.12),
+                  color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
+                    color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.12),
                     blurRadius: 20,
                     offset: const Offset(0, 4),
                   ),
@@ -75,8 +78,8 @@ class ViewerToolbar extends StatelessWidget {
                         Flexible(
                           child: Text(
                             fileName,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: colorScheme.onSurface,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.1,
@@ -89,13 +92,13 @@ class ViewerToolbar extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
+                              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               '$index / $count',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.8),
+                                color: isDark ? Colors.white.withValues(alpha: 0.8) : ApertixColors.lightTextSecondary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -126,7 +129,7 @@ class ViewerToolbar extends StatelessWidget {
                   _GlassToolbarButton(
                     icon: Icons.tune_rounded,
                     tooltip: 'Edit & Color Grade (E)',
-                    highlightColor: ApertixColors.cyanAccent,
+                    highlightColor: ApertixColors.primary,
                     onTap: () {
                       final current = viewerState.currentPath;
                       if (current != null) {
@@ -183,6 +186,9 @@ class _GlassToolbarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final defaultColor = isDark ? Colors.white.withValues(alpha: 0.9) : ApertixColors.lightTextPrimary;
+
     return Tooltip(
       message: tooltip,
       child: Material(
@@ -190,12 +196,12 @@ class _GlassToolbarButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
-          hoverColor: (highlightColor ?? Colors.white).withValues(alpha: 0.12),
+          hoverColor: (highlightColor ?? defaultColor).withValues(alpha: 0.12),
           child: Padding(
             padding: const EdgeInsets.all(7),
             child: Icon(
               icon,
-              color: highlightColor ?? Colors.white.withValues(alpha: 0.9),
+              color: highlightColor ?? defaultColor,
               size: 20,
             ),
           ),

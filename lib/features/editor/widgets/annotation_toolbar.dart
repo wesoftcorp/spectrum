@@ -50,12 +50,13 @@ class AnnotationToolbar extends StatelessWidget {
           _buildToolButton(AnnotationType.text, Icons.title_rounded, 'Text'),
 
           const SizedBox(width: 8),
-          Container(width: 1, height: 28, color: Colors.white24),
+          Container(width: 1, height: 28, color: Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.black12),
           const SizedBox(width: 8),
 
           // Color palette circles
           ..._palette.map((c) {
             final isSelected = activeColor == c;
+            final isDark = Theme.of(context).brightness == Brightness.dark;
             return GestureDetector(
               onTap: () => onColorChanged(c),
               child: AnimatedContainer(
@@ -67,7 +68,7 @@ class AnnotationToolbar extends StatelessWidget {
                   color: c,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isSelected ? ApertixColors.cyanAccent : Colors.white24,
+                    color: isSelected ? ApertixColors.primary : (isDark ? Colors.white24 : Colors.black12),
                     width: isSelected ? 2.5 : 1,
                   ),
                 ),
@@ -76,32 +77,44 @@ class AnnotationToolbar extends StatelessWidget {
           }),
 
           const SizedBox(width: 8),
-          Container(width: 1, height: 28, color: Colors.white24),
+          Container(width: 1, height: 28, color: Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.black12),
           const SizedBox(width: 8),
 
           // Stroke widths: 2, 4, 8
-          _buildStrokeButton(2.0, '2px'),
-          _buildStrokeButton(4.0, '4px'),
-          _buildStrokeButton(8.0, '8px'),
+          _buildStrokeButton(context, 2.0, '2px'),
+          _buildStrokeButton(context, 4.0, '4px'),
+          _buildStrokeButton(context, 8.0, '8px'),
 
           const SizedBox(width: 8),
-          Container(width: 1, height: 28, color: Colors.white24),
+          Container(width: 1, height: 28, color: Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.black12),
           const SizedBox(width: 8),
 
           // Undo annotation
-          IconButton(
-            icon: const Icon(Icons.undo_rounded, size: 20),
-            tooltip: 'Undo last stroke',
-            color: canUndo ? Colors.white : Colors.white24,
-            onPressed: canUndo ? onUndo : null,
-          ),
-
-          // Clear annotations
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, size: 20),
-            tooltip: 'Clear all annotations',
-            color: canUndo ? Colors.white70 : Colors.white24,
-            onPressed: canUndo ? onClear : null,
+          Builder(
+            builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.undo_rounded, size: 20),
+                    tooltip: 'Undo last stroke',
+                    color: canUndo
+                        ? (isDark ? Colors.white : ApertixColors.lightTextPrimary)
+                        : (isDark ? Colors.white24 : Colors.black26),
+                    onPressed: canUndo ? onUndo : null,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                    tooltip: 'Clear all annotations',
+                    color: canUndo
+                        ? (isDark ? Colors.white70 : ApertixColors.lightTextSecondary)
+                        : (isDark ? Colors.white24 : Colors.black26),
+                    onPressed: canUndo ? onClear : null,
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -111,34 +124,42 @@ class AnnotationToolbar extends StatelessWidget {
   Widget _buildToolButton(AnnotationType type, IconData icon, String tooltip) {
     final isSelected = activeType == type;
 
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: () => onTypeChanged(type),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(7),
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          decoration: BoxDecoration(
-            color: isSelected ? ApertixColors.cyanAccent.withValues(alpha: 0.2) : Colors.transparent,
+    return Builder(
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Tooltip(
+          message: tooltip,
+          child: InkWell(
+            onTap: () => onTypeChanged(type),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? ApertixColors.cyanAccent : Colors.transparent,
-              width: 1,
+            child: Container(
+              padding: const EdgeInsets.all(7),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? ApertixColors.primary.withValues(alpha: 0.15) : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isSelected ? ApertixColors.primary : Colors.transparent,
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                icon,
+                size: 19,
+                color: isSelected
+                    ? ApertixColors.primary
+                    : (isDark ? Colors.white70 : ApertixColors.lightTextSecondary),
+              ),
             ),
           ),
-          child: Icon(
-            icon,
-            size: 19,
-            color: isSelected ? ApertixColors.cyanAccent : Colors.white70,
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildStrokeButton(double width, String label) {
+  Widget _buildStrokeButton(BuildContext context, double width, String label) {
     final isSelected = activeStrokeWidth == width;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
       onTap: () => onStrokeWidthChanged(width),
@@ -147,7 +168,7 @@ class AnnotationToolbar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white24 : Colors.transparent,
+          color: isSelected ? (isDark ? Colors.white24 : Colors.black12) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
@@ -155,7 +176,9 @@ class AnnotationToolbar extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? ApertixColors.cyanAccent : Colors.white70,
+            color: isSelected
+                ? ApertixColors.primary
+                : (isDark ? Colors.white70 : ApertixColors.lightTextSecondary),
           ),
         ),
       ),

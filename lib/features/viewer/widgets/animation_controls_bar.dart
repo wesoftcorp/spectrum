@@ -23,6 +23,9 @@ class AnimationControlsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -30,15 +33,15 @@ class AnimationControlsBar extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0xFF101322).withValues(alpha: 0.85),
+            color: (isDark ? ApertixColors.darkSurfaceElevated : Colors.white).withValues(alpha: isDark ? 0.88 : 0.92),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: ApertixColors.warning.withValues(alpha: 0.4),
+              color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
+                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
@@ -75,7 +78,7 @@ class AnimationControlsBar extends StatelessWidget {
               // Step Backward (if supported)
               if (onStepBackward != null)
                 IconButton(
-                  icon: const Icon(Icons.skip_previous_rounded, size: 18, color: Colors.white70),
+                  icon: Icon(Icons.skip_previous_rounded, size: 18, color: isDark ? Colors.white70 : ApertixColors.lightTextSecondary),
                   tooltip: 'Previous Frame',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -87,7 +90,7 @@ class AnimationControlsBar extends StatelessWidget {
                 icon: Icon(
                   isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
                   size: 24,
-                  color: ApertixColors.cyanAccent,
+                  color: ApertixColors.primary,
                 ),
                 tooltip: isPlaying ? 'Pause Animation' : 'Play Animation',
                 padding: EdgeInsets.zero,
@@ -98,7 +101,7 @@ class AnimationControlsBar extends StatelessWidget {
               // Step Forward (if supported)
               if (onStepForward != null)
                 IconButton(
-                  icon: const Icon(Icons.skip_next_rounded, size: 18, color: Colors.white70),
+                  icon: Icon(Icons.skip_next_rounded, size: 18, color: isDark ? Colors.white70 : ApertixColors.lightTextSecondary),
                   tooltip: 'Next Frame',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -106,7 +109,7 @@ class AnimationControlsBar extends StatelessWidget {
                 ),
 
               const SizedBox(width: 6),
-              Container(width: 1, height: 16, color: Colors.white24),
+              Container(width: 1, height: 16, color: isDark ? Colors.white24 : Colors.black12),
               const SizedBox(width: 8),
 
               // Speed selector
@@ -123,15 +126,15 @@ class AnimationControlsBar extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '${playbackSpeed}x',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
                       fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),

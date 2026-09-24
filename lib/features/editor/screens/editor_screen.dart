@@ -69,22 +69,28 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final params = _comparingOriginal ? const EditorParameters() : editorState.currentParams;
     final colorMatrix = params.calculateColorMatrix();
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF090A0F),
+      backgroundColor: isDark ? ApertixColors.darkBackground : ApertixColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF10131E).withValues(alpha: 0.95),
+        backgroundColor: isDark
+            ? ApertixColors.darkSurface.withValues(alpha: 0.95)
+            : ApertixColors.lightSurface.withValues(alpha: 0.95),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: Colors.white),
+          icon: Icon(Icons.close_rounded, color: colorScheme.onSurface),
           tooltip: 'Cancel & Exit',
           onPressed: () => context.pop(),
         ),
         title: Text(
           p.basename(widget.filePath),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: colorScheme.onSurface,
             letterSpacing: 0.2,
           ),
         ),
@@ -100,13 +106,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               margin: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
                 color: _comparingOriginal
-                    ? const Color(0xFF00F2FE).withValues(alpha: 0.25)
-                    : Colors.white.withValues(alpha: 0.08),
+                    ? ApertixColors.primary.withValues(alpha: 0.2)
+                    : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: _comparingOriginal
-                      ? const Color(0xFF00F2FE)
-                      : Colors.white.withValues(alpha: 0.15),
+                      ? ApertixColors.primary
+                      : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
                   width: 1,
                 ),
               ),
@@ -115,7 +121,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                   Icon(
                     Icons.compare_rounded,
                     size: 15,
-                    color: _comparingOriginal ? const Color(0xFF00F2FE) : Colors.white70,
+                    color: _comparingOriginal
+                        ? ApertixColors.primary
+                        : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -123,7 +131,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: _comparingOriginal ? const Color(0xFF00F2FE) : Colors.white,
+                      color: _comparingOriginal
+                          ? ApertixColors.primary
+                          : colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -288,10 +298,17 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     EditorState editorState,
     EditorNotifier notifier,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF10131E),
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1)),
+        color: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
+            width: 1,
+          ),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -330,7 +347,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               },
             ),
 
-            const Divider(height: 1, color: Color(0xFF1F243B)),
+            Divider(height: 1, color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
 
             // Tab bar
             Padding(
@@ -338,11 +355,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildTabButton(_EditorTab.transform, Icons.crop_rotate_rounded, 'Transform'),
-                  _buildTabButton(_EditorTab.crop, Icons.crop_rounded, 'Crop'),
-                  _buildTabButton(_EditorTab.adjust, Icons.tune_rounded, 'Adjust'),
-                  _buildTabButton(_EditorTab.filters, Icons.auto_awesome_rounded, 'Filters'),
-                  _buildTabButton(_EditorTab.annotate, Icons.draw_rounded, 'Annotate'),
+                  _buildTabButton(_EditorTab.transform, Icons.crop_rotate_rounded, 'Transform', isDark),
+                  _buildTabButton(_EditorTab.crop, Icons.crop_rounded, 'Crop', isDark),
+                  _buildTabButton(_EditorTab.adjust, Icons.tune_rounded, 'Adjust', isDark),
+                  _buildTabButton(_EditorTab.filters, Icons.auto_awesome_rounded, 'Filters', isDark),
+                  _buildTabButton(_EditorTab.annotate, Icons.draw_rounded, 'Annotate', isDark),
                 ],
               ),
             ),
@@ -352,7 +369,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     );
   }
 
-  Widget _buildTabButton(_EditorTab tab, IconData icon, String label) {
+  Widget _buildTabButton(_EditorTab tab, IconData icon, String label, bool isDark) {
     final isSelected = _currentTab == tab;
 
     return InkWell(
@@ -362,10 +379,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF00F2FE).withValues(alpha: 0.12) : Colors.transparent,
+          color: isSelected
+              ? ApertixColors.primary.withValues(alpha: 0.15)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? const Color(0xFF00F2FE).withValues(alpha: 0.5) : Colors.transparent,
+            color: isSelected
+                ? ApertixColors.primary
+                : Colors.transparent,
             width: 1,
           ),
         ),
@@ -375,7 +396,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             Icon(
               icon,
               size: 18,
-              color: isSelected ? const Color(0xFF00F2FE) : Colors.white60,
+              color: isSelected
+                  ? ApertixColors.primary
+                  : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
             ),
             const SizedBox(width: 6),
             Text(
@@ -383,7 +406,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? const Color(0xFF00F2FE) : Colors.white60,
+                color: isSelected
+                    ? ApertixColors.primary
+                    : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
               ),
             ),
           ],
@@ -563,6 +588,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     required ValueChanged<double> onChanged,
     required ValueChanged<double> onChangeEnd,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Column(
@@ -570,11 +597,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         children: [
           Row(
             children: [
-              Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
+                ),
+              ),
               const SizedBox(width: 6),
               Text(
                 (value * 100).round().toString(),
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? ApertixColors.darkTextPrimary : ApertixColors.lightTextPrimary,
+                ),
               ),
             ],
           ),
@@ -598,6 +635,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     required String label,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -606,9 +645,19 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 24, color: Colors.white),
+            Icon(
+              icon,
+              size: 24,
+              color: isDark ? ApertixColors.darkTextPrimary : ApertixColors.lightTextPrimary,
+            ),
             const SizedBox(height: 6),
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
+              ),
+            ),
           ],
         ),
       ),

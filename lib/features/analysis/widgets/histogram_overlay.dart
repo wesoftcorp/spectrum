@@ -21,6 +21,10 @@ class HistogramOverlay extends ConsumerWidget {
     final histAsync = ref.watch(histogramProvider(filePath));
     final activeChannel = ref.watch(selectedHistogramChannelProvider);
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
@@ -29,12 +33,12 @@ class HistogramOverlay extends ConsumerWidget {
           width: 320,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF0D111A).withValues(alpha: 0.88),
+            color: (isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface).withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
+            border: Border.all(color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder, width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -48,14 +52,14 @@ class HistogramOverlay extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.bar_chart_rounded, color: ApertixColors.cyanAccent, size: 16),
-                      SizedBox(width: 6),
+                      const Icon(Icons.bar_chart_rounded, color: ApertixColors.primary, size: 16),
+                      const SizedBox(width: 6),
                       Text(
                         'HISTOGRAM',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: colorScheme.onSurface,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.2,
@@ -65,7 +69,7 @@ class HistogramOverlay extends ConsumerWidget {
                   ),
                   if (onClose != null)
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 16, color: Colors.white70),
+                      icon: Icon(Icons.close_rounded, size: 16, color: colorScheme.onSurfaceVariant),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: onClose,
@@ -90,12 +94,12 @@ class HistogramOverlay extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? ApertixColors.primary.withValues(alpha: 0.35)
-                                : Colors.white.withValues(alpha: 0.05),
+                                ? ApertixColors.primary.withValues(alpha: 0.2)
+                                : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04)),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
                               color: isSelected
-                                  ? ApertixColors.cyanAccent.withValues(alpha: 0.6)
+                                  ? ApertixColors.primary
                                   : Colors.transparent,
                             ),
                           ),
@@ -103,7 +107,9 @@ class HistogramOverlay extends ConsumerWidget {
                             child: Text(
                               channel.label,
                               style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.white60,
+                                color: isSelected
+                                    ? ApertixColors.primary
+                                    : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
                                 fontSize: 11,
                                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                               ),

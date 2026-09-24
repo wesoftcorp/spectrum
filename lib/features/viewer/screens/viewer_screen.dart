@@ -262,11 +262,13 @@ class _ViewerScreenState extends ConsumerState<ViewerScreen> {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Picasa Frosted Dark Background Scrim
+                  // Picasa Frosted Background Scrim
                   BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                     child: Container(
-                      color: const Color(0xF007080D),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xEE12141A)
+                          : const Color(0xEEF4F6F9),
                     ),
                   ),
 

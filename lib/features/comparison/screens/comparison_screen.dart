@@ -73,11 +73,15 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
         const SingleActivator(LogicalKeyboardKey.keyS): _swapImages,
         const SingleActivator(LogicalKeyboardKey.keyH): () => setState(() => _showHistogram = !_showHistogram),
       },
-      child: Focus(
-        autofocus: true,
-        child: Scaffold(
-          backgroundColor: const Color(0xFF07080C),
-          body: Stack(
+      child: Builder(
+        builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          return Focus(
+            autofocus: true,
+            child: Scaffold(
+              backgroundColor: isDark ? ApertixColors.darkBackground : ApertixColors.lightBackground,
+              body: Stack(
             fit: StackFit.expand,
             children: [
               // Main Comparison Viewport
@@ -125,9 +129,9 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                         margin: const EdgeInsets.only(bottom: 6),
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10131E).withValues(alpha: 0.9),
+                          color: (isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface).withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white12),
+                          border: Border.all(color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -148,8 +152,10 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
             ],
           ),
         ),
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 
   Widget _targetChip(String text, int targetIndex) {
@@ -176,40 +182,43 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
   }
 
   Widget _buildTopBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF090A0F).withValues(alpha: 0.8),
+            color: (isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface).withValues(alpha: 0.90),
             border: Border(
-              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+              bottom: BorderSide(color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
             ),
           ),
           child: Row(
             children: [
               // Back Button
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
+                icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: colorScheme.onSurface),
                 tooltip: 'Back (Esc)',
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
               const SizedBox(width: 8),
 
               // Title
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.compare_rounded, color: ApertixColors.cyanAccent, size: 16),
-                      SizedBox(width: 6),
+                      const Icon(Icons.compare_rounded, color: ApertixColors.primary, size: 16),
+                      const SizedBox(width: 6),
                       Text(
                         'COMPARISON STUDIO',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: colorScheme.onSurface,
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.2,
@@ -225,9 +234,9 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
               Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -247,7 +256,7 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                   icon: Icon(
                     _orientation == SplitOrientation.horizontal ? Icons.view_agenda_rounded : Icons.view_column_rounded,
                     size: 18,
-                    color: Colors.white70,
+                    color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
                   ),
                   tooltip: _orientation == SplitOrientation.horizontal ? 'Vertical Split' : 'Horizontal Split',
                   onPressed: () {
@@ -262,7 +271,9 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                   icon: Icon(
                     _isSyncLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
                     size: 18,
-                    color: _isSyncLocked ? ApertixColors.cyanAccent : Colors.white38,
+                    color: _isSyncLocked
+                        ? ApertixColors.primary
+                        : (isDark ? ApertixColors.darkTextMuted : ApertixColors.lightTextMuted),
                   ),
                   tooltip: _isSyncLocked ? 'Pan/Zoom Sync Locked' : 'Sync Unlocked',
                   onPressed: () => setState(() => _isSyncLocked = !_isSyncLocked),
@@ -272,7 +283,11 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
 
               // Swap Images Button
               IconButton(
-                icon: const Icon(Icons.swap_horiz_rounded, size: 20, color: Colors.white70),
+                icon: Icon(
+                  Icons.swap_horiz_rounded,
+                  size: 20,
+                  color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
+                ),
                 tooltip: 'Swap A ↔ B (S)',
                 onPressed: _swapImages,
               ),
@@ -282,7 +297,9 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
                 icon: Icon(
                   Icons.bar_chart_rounded,
                   size: 20,
-                  color: _showHistogram ? ApertixColors.cyanAccent : Colors.white70,
+                  color: _showHistogram
+                      ? ApertixColors.primary
+                      : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
                 ),
                 tooltip: 'Toggle Histogram (H)',
                 onPressed: () => setState(() => _showHistogram = !_showHistogram),
@@ -296,16 +313,18 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
 
   Widget _modeButton(ComparisonMode mode, IconData icon, String label) {
     final isSelected = _mode == mode;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: () => setState(() => _mode = mode),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? ApertixColors.primary.withValues(alpha: 0.4) : Colors.transparent,
+          color: isSelected ? ApertixColors.primary.withValues(alpha: 0.18) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? ApertixColors.cyanAccent.withValues(alpha: 0.5) : Colors.transparent,
+            color: isSelected ? ApertixColors.primary : Colors.transparent,
           ),
         ),
         child: Row(
@@ -314,13 +333,17 @@ class _ComparisonScreenState extends ConsumerState<ComparisonScreen> {
             Icon(
               icon,
               size: 14,
-              color: isSelected ? ApertixColors.cyanAccent : Colors.white60,
+              color: isSelected
+                  ? ApertixColors.primary
+                  : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white60,
+                color: isSelected
+                    ? ApertixColors.primary
+                    : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),

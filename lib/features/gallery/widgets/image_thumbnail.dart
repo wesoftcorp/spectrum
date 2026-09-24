@@ -73,29 +73,29 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
               color: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
               border: Border.all(
                 color: isSelected
-                    ? ApertixColors.cyanAccent
+                    ? ApertixColors.primary
                     : (_isHovered
-                        ? ApertixColors.cyanAccent.withValues(alpha: 0.8)
+                        ? ApertixColors.primary.withValues(alpha: 0.6)
                         : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder)),
                 width: isSelected ? 2.5 : (_isHovered ? 1.5 : 1.0),
               ),
               boxShadow: [
                 if (isSelected)
                   BoxShadow(
-                    color: ApertixColors.cyanAccent.withValues(alpha: 0.35),
-                    blurRadius: 18,
-                    spreadRadius: 2,
+                    color: ApertixColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 14,
+                    spreadRadius: 1,
                   )
                 else if (_isHovered)
                   BoxShadow(
-                    color: ApertixColors.cyanAccent.withValues(alpha: 0.22),
-                    blurRadius: 16,
+                    color: ApertixColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 12,
                     spreadRadius: 1,
                     offset: const Offset(0, 4),
                   )
                 else
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -126,7 +126,7 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
                 // Selection tint overlay
                 if (isSelected)
                   Container(
-                    color: ApertixColors.cyanAccent.withValues(alpha: 0.2),
+                    color: ApertixColors.primary.withValues(alpha: 0.15),
                   ),
 
                 // Top Pills (Format badge, Selection Checkbox, Hover Actions)
@@ -172,16 +172,16 @@ class _ImageThumbnailState extends State<ImageThumbnail> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isSelected
-                                  ? ApertixColors.cyanAccent
+                                  ? ApertixColors.primary
                                   : Colors.black.withValues(alpha: 0.5),
                               border: Border.all(
-                                color: isSelected ? ApertixColors.cyanAccent : Colors.white60,
+                                color: isSelected ? ApertixColors.primary : Colors.white60,
                                 width: 1.5,
                               ),
                             ),
                             child: Center(
                               child: isSelected
-                                  ? const Icon(Icons.check_rounded, size: 16, color: Colors.black)
+                                  ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
                                   : null,
                             ),
                           ),

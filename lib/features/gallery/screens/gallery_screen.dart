@@ -257,12 +257,12 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F121E).withValues(alpha: 0.9),
+            color: (isDark ? ApertixColors.darkSurfaceElevated : Colors.white).withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: ApertixColors.cyanAccent.withValues(alpha: 0.4), width: 1.2),
+            border: Border.all(color: ApertixColors.primary.withValues(alpha: 0.4), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.12),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -654,12 +654,12 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? (isDark ? ApertixColors.cyanAccent.withValues(alpha: 0.2) : ApertixColors.primary)
+                        ? ApertixColors.primary.withValues(alpha: isDark ? 0.25 : 0.15)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: isSelected
-                          ? (isDark ? ApertixColors.cyanAccent : Colors.transparent)
+                          ? ApertixColors.primary
                           : Colors.transparent,
                     ),
                   ),
@@ -669,7 +669,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                       fontSize: 11,
                       fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                       color: isSelected
-                          ? (isDark ? ApertixColors.cyanAccent : Colors.white)
+                          ? (isDark ? ApertixColors.primaryLight : ApertixColors.primary)
                           : (isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary),
                     ),
                   ),
@@ -880,20 +880,22 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   }
 
   Future<void> _showWindowsShellSetupDialog() async {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF10131E),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.desktop_windows_rounded, color: ApertixColors.cyanAccent, size: 20),
-            SizedBox(width: 8),
-            Text('Windows File Associations', style: TextStyle(color: Colors.white, fontSize: 16)),
+            const Icon(Icons.desktop_windows_rounded, color: ApertixColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text('Windows File Associations', style: TextStyle(color: colorScheme.onSurface, fontSize: 16)),
           ],
         ),
-        content: const Text(
+        content: Text(
           'Configure Apertix as your primary image player for JPEG, PNG, WebP, GIF, BMP, RAW, and 80+ media formats.\n\nYou can open Windows Default Apps settings or export a customized registry (.reg) script to your Desktop.',
-          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, height: 1.4),
         ),
         actions: [
           TextButton(

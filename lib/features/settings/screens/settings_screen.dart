@@ -50,20 +50,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showWindowsShellSetupDialog() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF10131E),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.desktop_windows_rounded, color: ApertixColors.cyanAccent, size: 20),
-            SizedBox(width: 8),
-            Text('Windows File Associations', style: TextStyle(color: Colors.white, fontSize: 16)),
+            const Icon(Icons.desktop_windows_rounded, color: ApertixColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Text('Windows File Associations', style: TextStyle(color: colorScheme.onSurface, fontSize: 16)),
           ],
         ),
-        content: const Text(
+        content: Text(
           'Configure Apertix as your primary image player for JPEG, PNG, WebP, GIF, BMP, RAW, and 80+ media formats.\n\nYou can open Windows Default Apps settings or export a customized registry (.reg) script to your Desktop.',
-          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, height: 1.4),
         ),
         actions: [
           TextButton(
@@ -107,8 +109,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
     final themeMode = ref.watch(themeModeProvider);
-    final textTheme = Theme.of(context).textTheme;
+    final textTheme = theme.textTheme;
     final isPro = ref.watch(isProActiveProvider);
 
     return Scaffold(
@@ -125,12 +130,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isPro
-                    ? [ApertixColors.primary.withValues(alpha: 0.3), ApertixColors.secondary.withValues(alpha: 0.3)]
-                    : [const Color(0xFF1E2438), const Color(0xFF131826)],
+                    ? [ApertixColors.primary.withValues(alpha: 0.2), ApertixColors.secondary.withValues(alpha: 0.2)]
+                    : (isDark
+                        ? [ApertixColors.darkSurfaceElevated, ApertixColors.darkSurface]
+                        : [ApertixColors.lightSurfaceElevated, ApertixColors.lightSurface]),
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isPro ? ApertixColors.cyanAccent.withValues(alpha: 0.6) : Colors.white12,
+                color: isPro
+                    ? ApertixColors.primary.withValues(alpha: 0.5)
+                    : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
               ),
             ),
             child: Row(
@@ -154,14 +163,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       Text(
                         isPro ? 'Apertix Pro Active' : 'Apertix Free Edition',
-                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         isPro
                             ? 'Commercial offline license unlocked with full studio capabilities.'
                             : 'Upgrade to Pro for Batch Processing, Unlimited Cloud Vault & Pro tools.',
-                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                       ),
                     ],
                   ),
@@ -183,11 +192,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Appearance Section
           const _SectionHeader(title: 'Appearance'),
           _SettingsTile(
-            leading: const Icon(Icons.palette_outlined, color: ApertixColors.cyanAccent),
+            leading: const Icon(Icons.palette_outlined, color: ApertixColors.primary),
             title: 'Theme Mode',
             subtitle: switch (themeMode) {
-              ThemeMode.dark => 'Cyber Luminescence Dark',
-              ThemeMode.light => 'Nordic Frost Light',
+              ThemeMode.dark => 'Studio Dark (Soothing Velvet Slate)',
+              ThemeMode.light => 'Studio Light (Calming Mist)',
               ThemeMode.system => 'Follow Operating System',
             },
             trailing: SegmentedButton<ThemeMode>(
@@ -338,19 +347,23 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
-      color: const Color(0xFF10131E).withValues(alpha: 0.8),
+      color: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        side: BorderSide(color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
       ),
       child: ListTile(
         leading: leading,
-        title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+        title: Text(title, style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
         subtitle: subtitle != null
-            ? Text(subtitle!, style: const TextStyle(color: Colors.white60, fontSize: 11))
+            ? Text(subtitle!, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11))
             : null,
         trailing: trailing,
         onTap: onTap,

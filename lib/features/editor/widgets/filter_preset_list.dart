@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 import '../models/editor_state.dart';
 
 /// Horizontal list of preset filters with visual preview.
@@ -18,6 +19,7 @@ class FilterPresetList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
       height: 96,
@@ -64,7 +66,9 @@ class FilterPresetList extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? colorScheme.primary : Colors.white70,
+                    color: isSelected
+                        ? colorScheme.primary
+                        : (isDark ? Colors.white70 : ApertixColors.lightTextSecondary),
                   ),
                 ),
               ],
