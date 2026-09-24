@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
+import 'package:file_picker/file_picker.dart';
 import '../models/editor_state.dart';
 import '../providers/editor_provider.dart';
 import '../widgets/crop_overlay.dart';
@@ -11,7 +12,10 @@ import '../widgets/export_dialog.dart';
 import '../models/annotation_model.dart';
 import '../widgets/annotation_canvas.dart';
 import '../widgets/annotation_toolbar.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/glass_container.dart';
+import '../../../core/widgets/glass_background.dart';
 import '../../social/widgets/social_hub_dialog.dart';
 import '../../analysis/services/histogram_service.dart';
 import '../services/auto_enhance_service.dart';
@@ -28,6 +32,7 @@ class EditorScreen extends ConsumerStatefulWidget {
 }
 
 class _EditorScreenState extends ConsumerState<EditorScreen> {
+  late String _activeFilePath;
   _EditorTab _currentTab = _EditorTab.transform;
   CropAspectRatio _cropRatio = CropAspectRatio.free;
   bool _comparingOriginal = false;
@@ -42,36 +47,170 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   @override
   void initState() {
     super.initState();
+    _activeFilePath = widget.filePath;
     _resolveImageNaturalSize();
   }
 
   Future<void> _resolveImageNaturalSize() async {
-    final image = Image.file(File(widget.filePath));
-    image.image.resolve(const ImageConfiguration()).addListener(
-      ImageStreamListener((info, _) {
-        if (mounted) {
-          setState(() {
-            _imageNaturalSize = Size(
-              info.image.width.toDouble(),
-              info.image.height.toDouble(),
-            );
-          });
-        }
-      }),
+    if (_activeFilePath.isEmpty || !File(_activeFilePath).existsSync()) {
+      return;
+    }
+    try {
+      final image = Image.file(File(_activeFilePath));
+      image.image.resolve(const ImageConfiguration()).addListener(
+        ImageStreamListener((info, _) {
+          if (mounted) {
+            setState(() {
+              _imageNaturalSize = Size(
+                info.image.width.toDouble(),
+                info.image.height.toDouble(),
+              );
+            });
+          }
+        }, onError: (_, __) {}),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _pickNewImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: SupportedFormats.pickerExtensions,
+      dialogTitle: 'Select Image to Edit',
     );
+    if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
+      setState(() {
+        _activeFilePath = result.files.first.path!;
+        _annotations.clear();
+      });
+      _resolveImageNaturalSize();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final editorState = ref.watch(editorProvider(widget.filePath));
-    final notifier = ref.read(editorProvider(widget.filePath).notifier);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+
+    // If no valid image is loaded, render a sleek Glassmorphism Welcome Canvas
+    if (_activeFilePath.isEmpty || !File(_activeFilePath).existsSync()) {
+      return Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0D0F14) : const Color(0xFFF3F5FA),
+        appBar: AppBar(
+          backgroundColor: (isDark ? const Color(0xFF13161F) : Colors.white).withValues(alpha: 0.85),
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_rounded, color: isDark ? Colors.white : Colors.black87),
+            tooltip: 'Back to Gallery',
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            'Photo Editor Studio',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          actions: [
+            FilledButton.icon(
+              icon: const Icon(Icons.folder_open_rounded, size: 16),
+              label: const Text('Open Photo'),
+              style: FilledButton.styleFrom(
+                backgroundColor: ApertixColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              onPressed: _pickNewImage,
+            ),
+            const SizedBox(width: 16),
+          ],
+        ),
+        body: GlassBackground(
+          child: Center(
+            child: GlassContainer(
+              blur: 20,
+              opacity: isDark ? 0.08 : 0.85,
+              borderRadius: BorderRadius.circular(24),
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
+              margin: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6C5CE7), ApertixColors.cyanAccent],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6C5CE7).withValues(alpha: 0.4),
+                            blurRadius: 28,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.tune_rounded, size: 40, color: Colors.white),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Apertix Pro Photo Editor',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Non-destructive color grading, cinematic LUT filters, professional crop aspect ratios, and brush annotations.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: isDark ? ApertixColors.darkTextSecondary : ApertixColors.lightTextSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.add_photo_alternate_rounded, size: 18),
+                      label: const Text('Select Photo to Edit'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: ApertixColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 6,
+                        shadowColor: ApertixColors.primary.withValues(alpha: 0.5),
+                      ),
+                      onPressed: _pickNewImage,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final editorState = ref.watch(editorProvider(_activeFilePath));
+    final notifier = ref.read(editorProvider(_activeFilePath).notifier);
 
     final params = _comparingOriginal ? const EditorParameters() : editorState.currentParams;
     final colorMatrix = params.calculateColorMatrix();
 
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       backgroundColor: isDark ? ApertixColors.darkBackground : ApertixColors.lightBackground,
@@ -86,7 +225,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          p.basename(widget.filePath),
+          p.basename(_activeFilePath),
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -156,7 +295,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             color: editorState.canRedo ? Colors.white : Colors.white24,
             onPressed: editorState.canRedo ? notifier.redo : null,
           ),
-          const SizedBox(width: 8),
+          // Open different image
+          IconButton(
+            icon: const Icon(Icons.folder_open_rounded),
+            tooltip: 'Open Different Image',
+            color: Colors.white70,
+            onPressed: _pickNewImage,
+          ),
+          const SizedBox(width: 6),
 
           // Social Hub Publish
           OutlinedButton.icon(
@@ -220,8 +366,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                             ColorFiltered(
                               colorFilter: ColorFilter.matrix(colorMatrix),
                               child: Image.file(
-                                File(widget.filePath),
+                                File(_activeFilePath),
                                 fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: Colors.black26,
+                                  child: const Center(
+                                    child: Icon(Icons.broken_image_rounded, size: 48, color: Colors.white38),
+                                  ),
+                                ),
                               ),
                             ),
                             if (params.vignette > 0)
@@ -677,7 +829,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
     try {
       final savedPath = await notifier.saveImage(
-        customOutputPath: options.overwrite ? widget.filePath : null,
+        customOutputPath: options.overwrite ? _activeFilePath : null,
         targetWidth: options.customWidth,
         targetHeight: options.customHeight,
         quality: options.quality,
@@ -708,7 +860,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   }
 
   Future<void> _handleSocialPublish(EditorState editorState, EditorNotifier notifier) async {
-    String publishPath = widget.filePath;
+    String publishPath = _activeFilePath;
     if (_annotations.isNotEmpty || editorState.currentParams.isModified) {
       final naturalW = _imageNaturalSize?.width.round() ?? 1920;
       final naturalH = _imageNaturalSize?.height.round() ?? 1080;

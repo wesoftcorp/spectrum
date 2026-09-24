@@ -22,6 +22,7 @@ import '../../collections/providers/collections_provider.dart';
 import '../../collections/models/album.dart';
 import '../../collections/widgets/album_picker_dialog.dart';
 import '../../cloud/widgets/cloud_vault_dialog.dart';
+import '../../social/widgets/social_hub_dialog.dart';
 
 enum _SortOption { nameAsc, nameDesc, dateNewest, dateOldest, sizeLargest }
 enum _GridDensity { compact, comfortable, large }
@@ -235,6 +236,8 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                 });
               },
               onOpenWindowsShell: _showWindowsShellSetupDialog,
+              onOpenPhotoEditor: () => _openPhotoEditor(),
+              onOpenSocialHub: () => _openSocialHub(),
             ),
 
             // Main Studio Content Area
@@ -554,85 +557,95 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                // If sidebar is collapsed, show quick toggle
-                if (_isSidebarCollapsed) ...[
-                  IconButton(
-                    icon: const Icon(Icons.menu_rounded, size: 20),
-                    tooltip: 'Expand Studio Rail',
-                    onPressed: () => setState(() => _isSidebarCollapsed = false),
-                  ),
-                  const SizedBox(width: 8),
-                ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth;
+                final isNarrow = availableWidth < 680;
+                final isUltraNarrow = availableWidth < 460;
 
-                // Current Context Pill (Breadcrumb)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.12)
-                          : Colors.white.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        currentContextIcon,
-                        size: 15,
-                        color: _favoritesFilter
-                            ? const Color(0xFFFF4757)
-                            : (isDark ? ApertixColors.cyanAccent : ApertixColors.primary),
+                return Row(
+                  children: [
+                    // If sidebar is collapsed, show quick toggle
+                    if (_isSidebarCollapsed) ...[
+                      IconButton(
+                        icon: const Icon(Icons.menu_rounded, size: 20),
+                        tooltip: 'Expand Studio Rail',
+                        onPressed: () => setState(() => _isSidebarCollapsed = false),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        currentContextTitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      if (activeAlbum != null || _favoritesFilter) ...[
-                        const SizedBox(width: 6),
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              _activeAlbumId = null;
-                              _favoritesFilter = false;
-                            });
-                          },
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 14,
-                            color: isDark ? Colors.white60 : Colors.black54,
+                    ],
+
+                    // Current Context Pill (Breadcrumb)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: isUltraNarrow ? 120 : (isNarrow ? 170 : 280)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.12)
+                                : Colors.white.withValues(alpha: 0.6),
                           ),
                         ),
-                      ],
-                    ],
-                  ),
-                ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              currentContextIcon,
+                              size: 15,
+                              color: _favoritesFilter
+                                  ? const Color(0xFFFF4757)
+                                  : (isDark ? ApertixColors.cyanAccent : ApertixColors.primary),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                currentContextTitle,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            if (activeAlbum != null || _favoritesFilter) ...[
+                              const SizedBox(width: 6),
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _activeAlbumId = null;
+                                    _favoritesFilter = false;
+                                  });
+                                },
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 14,
+                                  color: isDark ? Colors.white60 : Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
 
-                const Spacer(),
+                    // Spacer expands dynamically across all window sizes,
+                    // keeping right action icons docked cleanly to the far right edge!
+                    const Spacer(),
 
-                // Action tools (flexible and scrollable horizontally on compact viewports)
-                Flexible(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    reverse: true,
-                    child: Row(
+                    // Action tools (float dynamically according to screen size)
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Search field or search trigger
                         if (_isSearching)
                           Container(
-                            width: 200,
+                            width: isNarrow ? 130 : 200,
                             height: 36,
                             margin: const EdgeInsets.only(right: 8),
                             child: TextField(
@@ -640,7 +653,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                               autofocus: true,
                               style: const TextStyle(fontSize: 13),
                               decoration: InputDecoration(
-                                hintText: 'Filter by filename...',
+                                hintText: 'Filter...',
                                 hintStyle: TextStyle(
                                   fontSize: 12,
                                   color: isDark ? Colors.white38 : Colors.black38,
@@ -675,25 +688,33 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                           ),
 
                         // Open Folder CTA
-                        FilledButton.icon(
-                          icon: const Icon(Icons.folder_open_rounded, size: 16),
-                          label: const Text('Open Folder'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: ApertixColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                        if (!isUltraNarrow)
+                          FilledButton.icon(
+                            icon: const Icon(Icons.folder_open_rounded, size: 16),
+                            label: Text(isNarrow ? 'Folder' : 'Open Folder'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: ApertixColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(horizontal: isNarrow ? 10 : 14, vertical: 10),
+                              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                            ),
+                            onPressed: _pickFolder,
+                          )
+                        else
+                          IconButton(
+                            icon: const Icon(Icons.folder_open_rounded),
+                            tooltip: 'Open Folder',
+                            onPressed: _pickFolder,
                           ),
-                          onPressed: _pickFolder,
-                        ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
 
-                        // Open Single File
-                        IconButton(
-                          icon: const Icon(Icons.add_photo_alternate_outlined),
-                          tooltip: 'Open Image File',
-                          onPressed: _pickFile,
-                        ),
+                        // Open Single File (direct button on wider screens)
+                        if (!isUltraNarrow)
+                          IconButton(
+                            icon: const Icon(Icons.add_photo_alternate_outlined),
+                            tooltip: 'Open Image File',
+                            onPressed: _pickFile,
+                          ),
 
                         // Apertix Pro License Status
                         IconButton(
@@ -705,8 +726,8 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                           onPressed: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
                         ),
 
-                        // Windows Shell Setup
-                        if (Platform.isWindows)
+                        // Windows Shell Setup (collapses into more menu on narrow viewports)
+                        if (Platform.isWindows && !isNarrow)
                           IconButton(
                             icon: const Icon(Icons.desktop_windows_rounded),
                             tooltip: 'Windows Default App & Shell Setup',
@@ -719,11 +740,68 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                           tooltip: 'Settings',
                           onPressed: () => context.push('/settings'),
                         ),
+
+                        // Responsive dropdown menu for compact viewports
+                        if (isNarrow)
+                          PopupMenuButton<String>(
+                            tooltip: 'More actions',
+                            icon: const Icon(Icons.more_vert_rounded),
+                            onSelected: (val) {
+                              if (val == 'file') _pickFile();
+                              if (val == 'windows') _showWindowsShellSetupDialog();
+                              if (val == 'editor') _openPhotoEditor();
+                              if (val == 'social') _openSocialHub();
+                            },
+                            itemBuilder: (ctx) => [
+                              if (isUltraNarrow)
+                                const PopupMenuItem(
+                                  value: 'file',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.add_photo_alternate_outlined, size: 18),
+                                      SizedBox(width: 10),
+                                      Text('Open Image File'),
+                                    ],
+                                  ),
+                                ),
+                              if (Platform.isWindows)
+                                const PopupMenuItem(
+                                  value: 'windows',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.desktop_windows_rounded, size: 18),
+                                      SizedBox(width: 10),
+                                      Text('Windows Shell Setup'),
+                                    ],
+                                  ),
+                                ),
+                              const PopupMenuItem(
+                                value: 'editor',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.tune_rounded, size: 18),
+                                    SizedBox(width: 10),
+                                    Text('Photo Editor'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'social',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.share_rounded, size: 18),
+                                    SizedBox(width: 10),
+                                    Text('Social Hub'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -1019,6 +1097,69 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
         'fileList': images.map((f) => f.path).toList(),
         'index': index < 0 ? 0 : index,
       });
+    }
+  }
+
+  Future<void> _openPhotoEditor([String? path]) async {
+    String? targetPath = path;
+    if (targetPath == null && _selectedPaths.isNotEmpty) {
+      targetPath = _selectedPaths.first;
+    } else if (targetPath == null) {
+      final galleryState = ref.read(galleryProvider);
+      final images = galleryState.maybeWhen(data: (imgs) => imgs, orElse: () => <ImageFile>[]);
+      if (images.isNotEmpty) {
+        targetPath = images.first.path;
+      }
+    }
+
+    if (targetPath == null) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: SupportedFormats.pickerExtensions,
+        dialogTitle: 'Select Image to Edit',
+      );
+      if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
+        targetPath = result.files.first.path;
+      }
+    }
+
+    if (mounted) {
+      context.push('/editor', extra: {'filePath': targetPath ?? ''});
+    }
+  }
+
+  Future<void> _openSocialHub([String? path]) async {
+    String? targetPath = path;
+    if (targetPath == null && _selectedPaths.isNotEmpty) {
+      targetPath = _selectedPaths.first;
+    } else if (targetPath == null) {
+      final galleryState = ref.read(galleryProvider);
+      final images = galleryState.maybeWhen(data: (imgs) => imgs, orElse: () => <ImageFile>[]);
+      if (images.isNotEmpty) {
+        targetPath = images.first.path;
+      }
+    }
+
+    if (targetPath == null) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: SupportedFormats.pickerExtensions,
+        dialogTitle: 'Select Image for Social Hub',
+      );
+      if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
+        targetPath = result.files.first.path;
+      }
+    }
+
+    if (targetPath != null && mounted) {
+      showDialog(
+        context: context,
+        builder: (_) => SocialHubDialog(imagePath: targetPath!),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select or open an image to use Social Hub')),
+      );
     }
   }
 

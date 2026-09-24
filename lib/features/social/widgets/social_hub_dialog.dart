@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
+import 'package:file_picker/file_picker.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/di/providers.dart';
 import '../models/social_platform.dart';
@@ -22,6 +24,7 @@ class SocialHubDialog extends ConsumerStatefulWidget {
 }
 
 class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
+  late String _activeImagePath;
   bool _showHistory = false;
   bool _isMultiPublishMode = false;
   bool _isPublishingMulti = false;
@@ -47,11 +50,25 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
   @override
   void initState() {
     super.initState();
+    _activeImagePath = widget.imagePath;
     _captionController = TextEditingController();
     _altTextController = TextEditingController();
     _discordWebhookController = TextEditingController();
     _telegramTokenController = TextEditingController();
     _telegramChatIdController = TextEditingController();
+  }
+
+  Future<void> _pickNewImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: SupportedFormats.pickerExtensions,
+      dialogTitle: 'Select Image for Social Hub',
+    );
+    if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
+      setState(() {
+        _activeImagePath = result.files.first.path!;
+      });
+    }
   }
 
   @override
@@ -66,8 +83,8 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(socialHubProvider(widget.imagePath));
-    final notifier = ref.read(socialHubProvider(widget.imagePath).notifier);
+    final state = ref.watch(socialHubProvider(_activeImagePath));
+    final notifier = ref.read(socialHubProvider(_activeImagePath).notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final draft = state.draft;
@@ -168,46 +185,75 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
                 child: Icon(currentPlatform.icon, size: 18, color: Colors.white),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Social Hub',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: ApertixColors.cyanAccent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: ApertixColors.cyanAccent.withValues(alpha: 0.4)),
-                        ),
-                        child: const Text(
-                          'PRO',
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Social Hub',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            color: ApertixColors.cyanAccent,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    'Multi-platform 1-tap publisher • ${p.basename(widget.imagePath)}',
-                    style: const TextStyle(fontSize: 11, color: Colors.white54),
-                  ),
-                ],
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: ApertixColors.cyanAccent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: ApertixColors.cyanAccent.withValues(alpha: 0.4)),
+                          ),
+                          child: const Text(
+                            'PRO',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: ApertixColors.cyanAccent,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Multi-platform 1-tap publisher • ${_activeImagePath.isNotEmpty ? p.basename(_activeImagePath) : 'No Image'}',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: Colors.white54),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: _pickNewImage,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.white12),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.folder_open_rounded, size: 12, color: ApertixColors.cyanAccent),
+                                SizedBox(width: 4),
+                                Text('Change', style: TextStyle(fontSize: 10, color: ApertixColors.cyanAccent, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
               // Multi-Publish Mode Toggle
               InkWell(
                 onTap: () => setState(() => _isMultiPublishMode = !_isMultiPublishMode),
@@ -421,10 +467,36 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.file(
-                          File(widget.imagePath),
-                          fit: BoxFit.cover,
-                        ),
+                        _activeImagePath.isNotEmpty && File(_activeImagePath).existsSync()
+                            ? Image.file(
+                                File(_activeImagePath),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: Colors.black26,
+                                  child: const Center(
+                                    child: Icon(Icons.broken_image_rounded, size: 36, color: Colors.white38),
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                color: Colors.black26,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.image_not_supported_rounded, size: 36, color: Colors.white38),
+                                      const SizedBox(height: 8),
+                                      const Text('No image loaded', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                                      const SizedBox(height: 10),
+                                      TextButton.icon(
+                                        icon: const Icon(Icons.folder_open_rounded, size: 14),
+                                        label: const Text('Pick Image'),
+                                        onPressed: _pickNewImage,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                         // Platform watermark badge
                         Positioned(
                           bottom: 8,
@@ -883,7 +955,7 @@ class _SocialHubDialogState extends ConsumerState<SocialHubDialog> {
 
     if (mounted) {
       setState(() => _isPublishingMulti = false);
-      ref.read(socialHubProvider(widget.imagePath).notifier).loadHistory();
+      ref.read(socialHubProvider(_activeImagePath).notifier).loadHistory();
     }
   }
 

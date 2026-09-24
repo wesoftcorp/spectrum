@@ -30,6 +30,8 @@ class StudioSidebar extends ConsumerWidget {
     required this.onOpenComparisonStudio,
     required this.onOpenCloudVault,
     required this.onOpenWindowsShell,
+    this.onOpenPhotoEditor,
+    this.onOpenSocialHub,
   });
 
   final int totalImagesCount;
@@ -47,6 +49,8 @@ class StudioSidebar extends ConsumerWidget {
   final VoidCallback onOpenComparisonStudio;
   final VoidCallback onOpenCloudVault;
   final VoidCallback onOpenWindowsShell;
+  final VoidCallback? onOpenPhotoEditor;
+  final VoidCallback? onOpenSocialHub;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -220,13 +224,13 @@ class StudioSidebar extends ConsumerWidget {
                     _buildNavTile(
                       icon: Icons.tune_rounded,
                       label: 'Photo Editor',
-                      onTap: () => context.push('/editor'),
+                      onTap: onOpenPhotoEditor ?? () => context.push('/editor'),
                       isDark: isDark,
                     ),
                     _buildNavTile(
                       icon: Icons.share_rounded,
                       label: 'Social Hub',
-                      onTap: () => onOpenBatchStudio(),
+                      onTap: onOpenSocialHub ?? () {},
                       isDark: isDark,
                     ),
 

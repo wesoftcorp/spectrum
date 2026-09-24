@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:apertix/core/widgets/glass_container.dart';
 import 'package:apertix/core/widgets/glass_background.dart';
 import 'package:apertix/features/gallery/widgets/studio_sidebar.dart';
+import 'package:apertix/features/editor/screens/editor_screen.dart';
+import 'package:apertix/features/social/widgets/social_hub_dialog.dart';
 import 'package:apertix/data/sources/local/image_file_service.dart';
 
 void main() {
@@ -13,13 +15,13 @@ void main() {
   group('Glassmorphism Primitives Tests', () {
     testWidgets('GlassContainer renders child with backdrop filter and specular borders', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: GlassBackground(
               child: GlassContainer(
                 blur: 16.0,
                 opacity: 0.1,
-                child: const Text('Glass Content'),
+                child: Text('Glass Content'),
               ),
             ),
           ),
@@ -152,6 +154,54 @@ void main() {
       } finally {
         await tempDir.delete(recursive: true);
       }
+    });
+  });
+
+  group('Photo Editor & Social Hub Resilience Tests', () {
+    testWidgets('EditorScreen displays Glassmorphism Welcome Canvas when launched with empty path', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: EditorScreen(filePath: ''),
+          ),
+        ),
+      );
+
+      // Verify that instead of throwing an unhandled exception, it renders the welcome state cleanly
+      expect(find.text('Apertix Pro Photo Editor'), findsOneWidget);
+      expect(find.text('Select Photo to Edit'), findsOneWidget);
+      expect(find.text('Open Photo'), findsOneWidget);
+    });
+
+    testWidgets('SocialHubDialog renders gracefully with empty or missing image path', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: SocialHubDialog(imagePath: 'C:\\NonExistent\\sample.jpg'),
+            ),
+          ),
+        ),
+      );
+
+      // Verify Social Hub UI elements render cleanly
+      expect(find.text('Social Hub'), findsOneWidget);
+      expect(find.text('Optimal Framing'), findsOneWidget);
+      expect(find.text('No image loaded'), findsOneWidget);
     });
   });
 }
