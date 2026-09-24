@@ -3,39 +3,45 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Apertix design token palette.
 abstract final class ApertixColors {
-  // Primary — Electric Violet
+  // Primary — Electric Violet & Cyber Cyan
   static const primary = Color(0xFF6C5CE7);
   static const primaryLight = Color(0xFFA29BFE);
+  static const cyanAccent = Color(0xFF00F2FE);
+  static const cyanGlow = Color(0xFF4FACFE);
 
-  // Secondary — Mint
-  static const secondary = Color(0xFF00B894);
+  // Secondary — Emerald & Mint
+  static const secondary = Color(0xFF00FFA3);
   static const secondaryLight = Color(0xFF55EFC4);
 
-  // Accent — Rose
-  static const accent = Color(0xFFFD79A8);
+  // Accent & Alerts
+  static const accent = Color(0xFFFF5E7E);
+  static const warning = Color(0xFFFFB800);
+  static const error = Color(0xFFFF4757);
+  static const success = Color(0xFF00FFA3);
+  static const info = Color(0xFF00D2D3);
 
-  // Dark surface palette
-  static const darkBackground = Color(0xFF0D0D0D);
-  static const darkSurface = Color(0xFF1A1A2E);
-  static const darkBorder = Color(0xFF2D2D44);
-  static const darkTextPrimary = Color(0xFFF5F6FA);
-  static const darkTextSecondary = Color(0xFFB2BEC3);
+  // Dark Studio palette (Obsidian & Nordic Frost)
+  static const darkBackground = Color(0xFF090A0F);
+  static const darkSurface = Color(0xFF10131E);
+  static const darkSurfaceElevated = Color(0xFF171A2B);
+  static const darkCard = Color(0xFF151928);
+  static const darkBorder = Color(0xFF22283E);
+  static const darkBorderGlow = Color(0x3300F2FE);
+  static const darkTextPrimary = Color(0xFFF1F3F9);
+  static const darkTextSecondary = Color(0xFF8F99B0);
+  static const darkTextMuted = Color(0xFF5C6479);
 
-  // Light surface palette
-  static const lightBackground = Color(0xFFFAFAFA);
+  // Light Studio palette
+  static const lightBackground = Color(0xFFF6F8FC);
   static const lightSurface = Color(0xFFFFFFFF);
-  static const lightBorder = Color(0xFFDFE6E9);
-  static const lightTextPrimary = Color(0xFF2D3436);
-  static const lightTextSecondary = Color(0xFF636E72);
-
-  // Status
-  static const success = Color(0xFF00B894);
-  static const error = Color(0xFFFF7675);
-  static const warning = Color(0xFFFDCB6E);
-  static const info = Color(0xFF74B9FF);
+  static const lightSurfaceElevated = Color(0xFFEDF2F7);
+  static const lightCard = Color(0xFFFFFFFF);
+  static const lightBorder = Color(0xFFE2E8F0);
+  static const lightTextPrimary = Color(0xFF1A202C);
+  static const lightTextSecondary = Color(0xFF64748B);
 }
 
-/// Apertix Material 3 theme factory.
+/// Apertix Material 3 theme factory with Glassmorphism & High-Tech styling.
 abstract final class AppTheme {
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
@@ -48,20 +54,20 @@ abstract final class AppTheme {
       primary: ApertixColors.primary,
       onPrimary: Colors.white,
       primaryContainer:
-          isDark ? const Color(0xFF3D2F9E) : const Color(0xFFEDE9FF),
+          isDark ? const Color(0xFF28254A) : const Color(0xFFEDE9FF),
       onPrimaryContainer:
           isDark ? ApertixColors.primaryLight : ApertixColors.primary,
       secondary: ApertixColors.secondary,
-      onSecondary: Colors.white,
+      onSecondary: Colors.black,
       secondaryContainer:
-          isDark ? const Color(0xFF006652) : const Color(0xFFD9F8EF),
+          isDark ? const Color(0xFF0A3423) : const Color(0xFFD9F8EF),
       onSecondaryContainer:
-          isDark ? ApertixColors.secondaryLight : ApertixColors.secondary,
+          isDark ? ApertixColors.secondaryLight : const Color(0xFF007A55),
       error: ApertixColors.error,
       onError: Colors.white,
       errorContainer:
-          isDark ? const Color(0xFF7A2020) : const Color(0xFFFFE0E0),
-      onErrorContainer: isDark ? const Color(0xFFFFB3B3) : ApertixColors.error,
+          isDark ? const Color(0xFF4A1A22) : const Color(0xFFFFE0E0),
+      onErrorContainer: isDark ? const Color(0xFFFF8E9B) : ApertixColors.error,
       surface:
           isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
       onSurface:
@@ -70,9 +76,9 @@ abstract final class AppTheme {
           ? ApertixColors.darkTextSecondary
           : ApertixColors.lightTextSecondary,
       surfaceContainerHighest:
-          isDark ? const Color(0xFF252545) : const Color(0xFFF0EEF8),
+          isDark ? ApertixColors.darkSurfaceElevated : const Color(0xFFF1F5F9),
       outline: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
-      shadow: Colors.black,
+      shadow: Colors.black.withValues(alpha: 0.4),
       inverseSurface:
           isDark ? ApertixColors.lightSurface : ApertixColors.darkSurface,
       onInverseSurface: isDark
@@ -80,45 +86,55 @@ abstract final class AppTheme {
           : ApertixColors.darkTextPrimary,
     );
 
-    final textTheme = GoogleFonts.interTextTheme(
-      TextTheme(
-        displayLarge: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.w700,
-          color: colorScheme.onSurface,
-          letterSpacing: -0.5,
-        ),
-        displayMedium: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-          color: colorScheme.onSurface,
-        ),
-        titleLarge: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: colorScheme.onSurface,
-        ),
-        titleMedium: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: colorScheme.onSurface,
-        ),
-        bodyLarge: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w400,
-          color: colorScheme.onSurface,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w400,
-          color: colorScheme.onSurfaceVariant,
-        ),
-        labelLarge: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: colorScheme.primary,
-          letterSpacing: 0.1,
-        ),
+    const fontStack = ['Segoe UI', 'Inter', 'Roboto', 'sans-serif'];
+
+    final textTheme = TextTheme(
+      displayLarge: TextStyle(
+        fontFamilyFallback: fontStack,
+        fontSize: 34,
+        fontWeight: FontWeight.w800,
+        color: colorScheme.onSurface,
+        letterSpacing: -0.8,
+      ),
+      displayMedium: TextStyle(
+        fontFamilyFallback: fontStack,
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        color: colorScheme.onSurface,
+        letterSpacing: -0.4,
+      ),
+      titleLarge: TextStyle(
+        fontFamilyFallback: fontStack,
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: colorScheme.onSurface,
+        letterSpacing: -0.2,
+      ),
+      titleMedium: TextStyle(
+        fontFamilyFallback: fontStack,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: colorScheme.onSurface,
+      ),
+      bodyLarge: TextStyle(
+        fontFamilyFallback: fontStack,
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: colorScheme.onSurface,
+        letterSpacing: 0.1,
+      ),
+      bodyMedium: TextStyle(
+        fontFamilyFallback: fontStack,
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: colorScheme.onSurfaceVariant,
+      ),
+      labelLarge: TextStyle(
+        fontFamilyFallback: fontStack,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+        color: colorScheme.primary,
+        letterSpacing: 0.4,
       ),
     );
 
@@ -131,16 +147,27 @@ abstract final class AppTheme {
           isDark ? ApertixColors.darkBackground : ApertixColors.lightBackground,
       appBarTheme: AppBarTheme(
         backgroundColor:
-            isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
+            isDark ? ApertixColors.darkSurface.withValues(alpha: 0.95) : ApertixColors.lightSurface,
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
-        scrolledUnderElevation: 1,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: textTheme.titleLarge,
       ),
       iconTheme: IconThemeData(
         color: colorScheme.onSurfaceVariant,
         size: 20,
+      ),
+      cardTheme: CardThemeData(
+        color: isDark ? ApertixColors.darkCard : ApertixColors.lightCard,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder,
+            width: 1,
+          ),
+        ),
       ),
       dividerTheme: DividerThemeData(
         color: colorScheme.outline,
@@ -149,24 +176,45 @@ abstract final class AppTheme {
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF3A3A5C) : const Color(0xFF2D3436),
-          borderRadius: BorderRadius.circular(6),
+          color: const Color(0xFF1B2032),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFF2C3450), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        textStyle: const TextStyle(color: Colors.white, fontSize: 12),
-        waitDuration: const Duration(milliseconds: 600),
+        textStyle: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+        waitDuration: const Duration(milliseconds: 500),
       ),
       sliderTheme: SliderThemeData(
-        activeTrackColor: colorScheme.primary,
-        thumbColor: colorScheme.primary,
-        overlayColor: colorScheme.primary.withValues(alpha: 0.12),
+        activeTrackColor: ApertixColors.cyanAccent,
+        inactiveTrackColor: isDark ? const Color(0xFF20273D) : const Color(0xFFCBD5E1),
+        thumbColor: ApertixColors.cyanAccent,
+        overlayColor: ApertixColors.cyanAccent.withValues(alpha: 0.15),
         trackHeight: 3,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor:
-            isDark ? const Color(0xFF3A3A5C) : ApertixColors.darkSurface,
+            isDark ? const Color(0xFF1C2237) : ApertixColors.darkSurface,
         contentTextStyle:
             textTheme.bodyMedium?.copyWith(color: Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: isDark ? const Color(0xFF2E385B) : Colors.transparent,
+            width: 1,
+          ),
+        ),
         behavior: SnackBarBehavior.floating,
       ),
     );

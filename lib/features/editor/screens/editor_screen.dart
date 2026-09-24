@@ -58,17 +58,23 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final colorMatrix = params.calculateColorMatrix();
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF090A0F),
       appBar: AppBar(
-        backgroundColor: Colors.black.withValues(alpha: 0.8),
+        backgroundColor: const Color(0xFF10131E).withValues(alpha: 0.95),
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(Icons.close_rounded, color: Colors.white),
           tooltip: 'Cancel & Exit',
           onPressed: () => context.pop(),
         ),
         title: Text(
           p.basename(widget.filePath),
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            letterSpacing: 0.2,
+          ),
         ),
         actions: [
           // Hold to compare
@@ -76,20 +82,38 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             onTapDown: (_) => setState(() => _comparingOriginal = true),
             onTapUp: (_) => setState(() => _comparingOriginal = false),
             onTapCancel: () => setState(() => _comparingOriginal = false),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               margin: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
                 color: _comparingOriginal
-                    ? colorScheme.primary
-                    : Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
+                    ? const Color(0xFF00F2FE).withValues(alpha: 0.25)
+                    : Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _comparingOriginal
+                      ? const Color(0xFF00F2FE)
+                      : Colors.white.withValues(alpha: 0.15),
+                  width: 1,
+                ),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.compare_rounded, size: 16),
-                  SizedBox(width: 4),
-                  Text('Compare', style: TextStyle(fontSize: 12)),
+                  Icon(
+                    Icons.compare_rounded,
+                    size: 15,
+                    color: _comparingOriginal ? const Color(0xFF00F2FE) : Colors.white70,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Compare',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _comparingOriginal ? const Color(0xFF00F2FE) : Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -100,12 +124,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           IconButton(
             icon: const Icon(Icons.undo_rounded),
             tooltip: 'Undo',
+            color: editorState.canUndo ? Colors.white : Colors.white24,
             onPressed: editorState.canUndo ? notifier.undo : null,
           ),
           // Redo
           IconButton(
             icon: const Icon(Icons.redo_rounded),
             tooltip: 'Redo',
+            color: editorState.canRedo ? Colors.white : Colors.white24,
             onPressed: editorState.canRedo ? notifier.redo : null,
           ),
           const SizedBox(width: 8),
@@ -118,8 +144,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     height: 14,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Icon(Icons.save_rounded, size: 18),
+                : const Icon(Icons.save_rounded, size: 16),
             label: const Text('Export'),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF6C5CE7),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             onPressed: editorState.isProcessing ? null : () => _handleExport(notifier),
           ),
           const SizedBox(width: 12),
@@ -184,8 +217,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E2C),
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+        color: const Color(0xFF10131E),
+        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1)),
       ),
       child: SafeArea(
         top: false,
@@ -209,17 +242,20 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
               },
             ),
 
-            const Divider(height: 1, color: Colors.white12),
+            const Divider(height: 1, color: Color(0xFF1F243B)),
 
             // Tab bar
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildTabButton(_EditorTab.transform, Icons.crop_rotate_rounded, 'Transform'),
-                _buildTabButton(_EditorTab.crop, Icons.crop_rounded, 'Crop'),
-                _buildTabButton(_EditorTab.adjust, Icons.tune_rounded, 'Adjust'),
-                _buildTabButton(_EditorTab.filters, Icons.auto_awesome_rounded, 'Filters'),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildTabButton(_EditorTab.transform, Icons.crop_rotate_rounded, 'Transform'),
+                  _buildTabButton(_EditorTab.crop, Icons.crop_rounded, 'Crop'),
+                  _buildTabButton(_EditorTab.adjust, Icons.tune_rounded, 'Adjust'),
+                  _buildTabButton(_EditorTab.filters, Icons.auto_awesome_rounded, 'Filters'),
+                ],
+              ),
             ),
           ],
         ),
@@ -229,24 +265,36 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   Widget _buildTabButton(_EditorTab tab, IconData icon, String label) {
     final isSelected = _currentTab == tab;
-    final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: () => setState(() => _currentTab = tab),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Column(
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF00F2FE).withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF00F2FE).withValues(alpha: 0.5) : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20, color: isSelected ? colorScheme.primary : Colors.white60),
-            const SizedBox(height: 4),
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? const Color(0xFF00F2FE) : Colors.white60,
+            ),
+            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? colorScheme.primary : Colors.white60,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? const Color(0xFF00F2FE) : Colors.white60,
               ),
             ),
           ],

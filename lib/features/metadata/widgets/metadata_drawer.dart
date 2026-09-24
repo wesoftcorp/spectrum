@@ -16,37 +16,64 @@ class MetadataDrawer extends ConsumerWidget {
     final metadataAsync = ref.watch(imageMetadataProvider(filePath));
 
     return Drawer(
-      width: 360,
-      backgroundColor: const Color(0xFF1E1E2C),
+      width: 380,
+      backgroundColor: const Color(0xFF0F121D),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          bottomLeft: Radius.circular(20),
+        ),
+      ),
       child: SafeArea(
         child: Column(
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 14),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, size: 20),
-                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00F2FE).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_outlined,
+                      size: 18,
+                      color: Color(0xFF00F2FE),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   const Text(
-                    'Image Info & EXIF',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    'EXIF & Image Inspector',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
                     tooltip: 'Close',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1, color: Colors.white12),
+            const Divider(height: 1, color: Color(0xFF1F243B)),
 
             // Content
             Expanded(
               child: metadataAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00F2FE)),
+                  ),
+                ),
                 error: (err, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -64,8 +91,60 @@ class MetadataDrawer extends ConsumerWidget {
 
   Widget _buildMetadataList(BuildContext context, WidgetRef ref, ImageMetadata meta) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       children: [
+        // Camera Exposure HUD Card
+        if (meta.hasExposureInfo) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF15192B), Color(0xFF1A1F36)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF293252), width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (meta.cameraModel != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.photo_camera_rounded, size: 14, color: Color(0xFF00F2FE)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            meta.cameraModel!,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildHudMetric('SHUTTER', meta.shutterSpeed != null ? '${meta.shutterSpeed}s' : '—'),
+                    _buildHudMetric('APERTURE', meta.aperture != null ? 'ƒ/${meta.aperture}' : '—'),
+                    _buildHudMetric('ISO', meta.iso ?? '—'),
+                    _buildHudMetric('FOCAL', meta.focalLength != null ? '${meta.focalLength}mm' : '—'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+        ],
+
         // File Overview
         _buildSectionHeader('File Properties'),
         _buildMetaTile('Name', p.basename(meta.filePath)),
@@ -81,17 +160,6 @@ class MetadataDrawer extends ConsumerWidget {
           if (meta.cameraModel != null) _buildMetaTile('Model', meta.cameraModel!),
           if (meta.lensModel != null) _buildMetaTile('Lens', meta.lensModel!),
           if (meta.software != null) _buildMetaTile('Software', meta.software!),
-          const SizedBox(height: 16),
-        ],
-
-        // Exposure Details
-        if (meta.hasExposureInfo) ...[
-          _buildSectionHeader('Exposure Settings'),
-          if (meta.aperture != null) _buildMetaTile('Aperture', 'f/${meta.aperture}'),
-          if (meta.shutterSpeed != null) _buildMetaTile('Shutter Speed', '${meta.shutterSpeed}s'),
-          if (meta.iso != null) _buildMetaTile('ISO', meta.iso!),
-          if (meta.focalLength != null) _buildMetaTile('Focal Length', '${meta.focalLength} mm'),
-          if (meta.dateTaken != null) _buildMetaTile('Date Taken', meta.dateTaken!),
           const SizedBox(height: 16),
         ],
 
@@ -118,6 +186,40 @@ class MetadataDrawer extends ConsumerWidget {
     );
   }
 
+  Widget _buildHudMetric(String label, String value) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF00F2FE),
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white12, width: 0.5),
+          ),
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, top: 4),
@@ -126,7 +228,7 @@ class MetadataDrawer extends ConsumerWidget {
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF6C5CE7),
+          color: Color(0xFF00F2FE),
           letterSpacing: 0.8,
         ),
       ),

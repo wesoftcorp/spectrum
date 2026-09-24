@@ -1,86 +1,254 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/sources/local/image_file_service.dart';
 
-/// Single thumbnail tile in the gallery grid.
-class ImageThumbnail extends StatelessWidget {
+/// Modern Nordic Frost thumbnail card with hover glow, badge pills, and crisp metadata.
+class ImageThumbnail extends StatefulWidget {
   const ImageThumbnail({
     super.key,
     required this.imageFile,
     required this.onTap,
+    this.onQuickView,
+    this.onQuickEdit,
   });
 
   final ImageFile imageFile;
   final VoidCallback onTap;
+  final VoidCallback? onQuickView;
+  final VoidCallback? onQuickEdit;
+
+  @override
+  State<ImageThumbnail> createState() => _ImageThumbnailState();
+}
+
+class _ImageThumbnailState extends State<ImageThumbnail> {
+  bool _isHovered = false;
+
+  Color _badgeColor(String ext) {
+    switch (ext.toLowerCase()) {
+      case 'raw' || 'dng' || 'nef' || 'cr2' || 'arw':
+        return ApertixColors.primary;
+      case 'png' || 'webp':
+        return ApertixColors.cyanAccent;
+      case 'gif':
+        return ApertixColors.warning;
+      case 'svg':
+        return ApertixColors.secondary;
+      default:
+        return const Color(0xFF4A5568);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ext = widget.imageFile.extension.toUpperCase();
+    final badgeBg = _badgeColor(widget.imageFile.extension);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: colorScheme.outline, width: 1),
-          color: colorScheme.surfaceContainerHighest,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Image
-            Image.file(
-              File(imageFile.path),
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.broken_image_outlined,
-                color: colorScheme.onSurfaceVariant,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isHovered ? 1.025 : 1.0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: isDark ? ApertixColors.darkSurface : ApertixColors.lightSurface,
+              border: Border.all(
+                color: _isHovered
+                    ? ApertixColors.cyanAccent.withValues(alpha: 0.8)
+                    : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
+                width: _isHovered ? 1.5 : 1.0,
               ),
-              cacheWidth: 320,
-              cacheHeight: 320,
+              boxShadow: [
+                if (_isHovered)
+                  BoxShadow(
+                    color: ApertixColors.cyanAccent.withValues(alpha: 0.22),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 4),
+                  )
+                else
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+              ],
             ),
-            // Hover overlay
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
-                hoverColor: colorScheme.primary.withValues(alpha: 0.08),
-                splashColor: colorScheme.primary.withValues(alpha: 0.12),
-              ),
-            ),
-            // File name label at bottom
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.65),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Image layer
+                Image.file(
+                  File(widget.imageFile.path),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: isDark ? const Color(0xFF141724) : const Color(0xFFE2E8F0),
+                    child: Center(
+                      child: Icon(
+                        Icons.broken_image_rounded,
+                        color: isDark ? Colors.white38 : Colors.black38,
+                        size: 32,
+                      ),
+                    ),
+                  ),
+                  cacheWidth: 400,
+                  cacheHeight: 400,
+                ),
+
+                // Top Pills (Format badge & Quick Actions on hover)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  right: 8,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // File Extension Tag
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: badgeBg.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          ext,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+
+                      // Quick action hover capsule
+                      if (_isHovered)
+                        AnimatedOpacity(
+                          opacity: _isHovered ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 150),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white24, width: 0.5),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (widget.onQuickEdit != null)
+                                  _HoverIconAction(
+                                    icon: Icons.tune_rounded,
+                                    tooltip: 'Edit',
+                                    onTap: widget.onQuickEdit!,
+                                  ),
+                                _HoverIconAction(
+                                  icon: Icons.open_in_full_rounded,
+                                  tooltip: 'Open',
+                                  onTap: widget.onTap,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
-                child: Text(
-                  imageFile.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+
+                // Bottom Scrim & File Details
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(8, 16, 8, 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // Filename
+                        Expanded(
+                          child: Text(
+                            widget.imageFile.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.1,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        // Size label
+                        Text(
+                          widget.imageFile.sizeLabel,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverIconAction extends StatelessWidget {
+  const _HoverIconAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(icon, color: Colors.white, size: 14),
         ),
       ),
     );
