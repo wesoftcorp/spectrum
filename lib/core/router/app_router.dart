@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,10 +8,18 @@ import '../../features/settings/screens/settings_screen.dart';
 import '../../features/editor/screens/editor_screen.dart';
 import '../../features/comparison/screens/comparison_screen.dart';
 
+/// Provider for optional image file path passed when launching the app.
+final initialFilePathProvider = StateProvider<String?>((ref) => null);
+
 /// GoRouter provider — referencing it in ConsumerWidget ensures proper lifecycle.
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final initialFile = ref.watch(initialFilePathProvider);
+  final hasInitialImage = initialFile != null &&
+      initialFile.isNotEmpty &&
+      File(initialFile).existsSync();
+
   return GoRouter(
-    initialLocation: '/gallery',
+    initialLocation: hasInitialImage ? '/viewer' : '/gallery',
     debugLogDiagnostics: false,
     routes: [
       // Gallery — folder browser & thumbnail grid
@@ -26,7 +35,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'viewer',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final filePath = extra?['filePath'] as String? ?? '';
+          final filePath = extra?['filePath'] as String? ?? (initialFile ?? '');
           final fileList = (extra?['fileList'] as List?)?.cast<String>() ?? [];
           final index = extra?['index'] as int? ?? 0;
           return ViewerScreen(

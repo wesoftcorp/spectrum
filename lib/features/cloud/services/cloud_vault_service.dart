@@ -41,6 +41,10 @@ class CloudVaultService {
     try {
       final cleanUrl = config.serverUrl.trim();
       if (cleanUrl.isEmpty) return false;
+      final uri = Uri.tryParse(cleanUrl);
+      if (uri == null || (!uri.isScheme('https') && !uri.isScheme('http'))) {
+        return false;
+      }
 
       switch (config.providerType) {
         case CloudProviderType.webdav:
@@ -104,12 +108,25 @@ class CloudVaultService {
     }
 
     final fileName = p.basename(filePath);
+    final encodedFileName = Uri.encodeComponent(fileName);
     final cleanUrl = config.serverUrl.trim().replaceAll(RegExp(r'/+$'), '');
-    final cleanTarget = config.targetBucketOrFolder.trim().replaceAll(RegExp(r'^/+|/+$'), '');
+    final uri = Uri.tryParse(cleanUrl);
+    if (uri == null || (!uri.isScheme('https') && !uri.isScheme('http'))) {
+      throw const FormatException('Server URL must be a valid HTTP or HTTPS address');
+    }
+    final cleanTarget = config.targetBucketOrFolder
+        .trim()
+        .replaceAll(RegExp(r'^/+|/+$'), '')
+        .split('/')
+        .where((s) => s.isNotEmpty && s != '..' && s != '.')
+        .map(Uri.encodeComponent)
+        .join('/');
 
     switch (config.providerType) {
       case CloudProviderType.webdav:
-        final uploadUrl = '$cleanUrl/$cleanTarget/$fileName';
+        final uploadUrl = cleanTarget.isEmpty
+            ? '$cleanUrl/$encodedFileName'
+            : '$cleanUrl/$cleanTarget/$encodedFileName';
         final authStr = base64Encode(utf8.encode('${config.username}:${config.passwordOrToken}'));
         final stream = file.openRead();
         final length = await file.length();
@@ -118,6 +135,7 @@ class CloudVaultService {
           uploadUrl,
           data: stream,
           options: Options(
+            sendTimeout: const Duration(minutes: 5),
             headers: {
               'Authorization': 'Basic $authStr',
               'Content-Length': length,
@@ -128,7 +146,9 @@ class CloudVaultService {
         break;
 
       case CloudProviderType.supabase:
-        final uploadUrl = '$cleanUrl/storage/v1/object/$cleanTarget/$fileName';
+        final uploadUrl = cleanTarget.isEmpty
+            ? '$cleanUrl/storage/v1/object/$encodedFileName'
+            : '$cleanUrl/storage/v1/object/$cleanTarget/$encodedFileName';
         final formData = FormData.fromMap({
           'file': await MultipartFile.fromFile(filePath, filename: fileName),
         });
@@ -137,6 +157,7 @@ class CloudVaultService {
           uploadUrl,
           data: formData,
           options: Options(
+            sendTimeout: const Duration(minutes: 5),
             headers: {
               'apikey': config.passwordOrToken,
               'Authorization': 'Bearer ${config.passwordOrToken}',
@@ -157,6 +178,7 @@ class CloudVaultService {
           cleanUrl,
           data: formData,
           options: Options(
+            sendTimeout: const Duration(minutes: 5),
             headers: config.passwordOrToken.isNotEmpty
                 ? {'Authorization': 'Bearer ${config.passwordOrToken}'}
                 : null,

@@ -5,8 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/licensing/providers/license_provider.dart';
-import '../../../core/licensing/widgets/license_dialog.dart';
 import '../../../core/update/services/update_checker_service.dart';
 import '../../../data/sources/platform/windows_shell_service.dart';
 import '../../cloud/widgets/cloud_vault_dialog.dart';
@@ -41,7 +39,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (!info.hasUpdate) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Apertix is up to date! (v${AppConstants.appVersion})'),
+            content: Text('Spectrum is up to date! (v${AppConstants.appVersion})'),
             duration: Duration(seconds: 3),
           ),
         );
@@ -64,7 +62,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         content: Text(
-          'Configure Apertix as your primary image player for JPEG, PNG, WebP, GIF, BMP, RAW, and 80+ media formats.\n\nYou can open Windows Default Apps settings or export a customized registry (.reg) script to your Desktop.',
+          'Configure Spectrum as your primary image player for JPEG, PNG, WebP, GIF, BMP, RAW, and 80+ media formats.\n\nYou can open Windows Default Apps settings or export a customized registry (.reg) script to your Desktop.',
           style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -114,7 +112,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final colorScheme = theme.colorScheme;
     final themeMode = ref.watch(themeModeProvider);
     final textTheme = theme.textTheme;
-    final isPro = ref.watch(isProActiveProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -124,22 +121,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          // Pro Membership Banner
+          // Studio Edition Banner
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: isPro
-                    ? [ApertixColors.primary.withValues(alpha: 0.2), ApertixColors.secondary.withValues(alpha: 0.2)]
-                    : (isDark
-                        ? [ApertixColors.darkSurfaceElevated, ApertixColors.darkSurface]
-                        : [ApertixColors.lightSurfaceElevated, ApertixColors.lightSurface]),
+                colors: isDark
+                    ? [ApertixColors.primary.withValues(alpha: 0.15), ApertixColors.secondary.withValues(alpha: 0.15)]
+                    : [ApertixColors.primary.withValues(alpha: 0.08), ApertixColors.secondary.withValues(alpha: 0.08)],
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isPro
-                    ? ApertixColors.primary.withValues(alpha: 0.5)
-                    : (isDark ? ApertixColors.darkBorder : ApertixColors.lightBorder),
+                color: ApertixColors.primary.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -150,8 +143,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     gradient: const LinearGradient(colors: [ApertixColors.primary, ApertixColors.secondary]),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    isPro ? Icons.verified_rounded : Icons.workspace_premium_rounded,
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
                     color: Colors.white,
                     size: 24,
                   ),
@@ -162,27 +155,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isPro ? 'Apertix Pro Active' : 'Apertix Free Edition',
+                        'Spectrum Studio Edition',
                         style: TextStyle(color: colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isPro
-                            ? 'Commercial offline license unlocked with full studio capabilities.'
-                            : 'Upgrade to Pro for Batch Processing, Unlimited Cloud Vault & Pro tools.',
+                        'All features fully unlocked & free to use.',
                         style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: isPro ? Colors.white12 : ApertixColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
-                  child: Text(isPro ? 'Manage' : 'Upgrade'),
                 ),
               ],
             ),

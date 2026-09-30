@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 enum LicenseTier {
-  free('Apertix Core', 'Standard open-source features'),
-  pro('Apertix Pro', 'Advanced creative suite, batch engine, social publishing & AI features');
+  free('Spectrum Core', 'Standard open-source features'),
+  pro('Spectrum Pro', 'Advanced creative suite, batch engine, social publishing & AI features');
 
   final String title;
   final String description;

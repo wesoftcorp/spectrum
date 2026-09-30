@@ -1,5 +1,5 @@
-import 'dart:io';
-import 'dart:isolate';
+﻿import 'dart:io';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:path/path.dart' as p;
 import '../../../core/constants/app_constants.dart';
 
@@ -40,46 +40,134 @@ class ImageFile {
 
 /// Service for discovering and navigating image files on the file system.
 class ImageFileService {
-  /// Returns all supported image files in [folderPath], sorted by name.
-  /// Scans directory and file stats in a background isolate to eliminate UI stuttering.
+  static const int _maxDepth = 10;
+  static const int _maxDiscoveredImages = 30000;
+
+  static const _ignoredDirNames = {
+    'node_modules',
+    r'$recycle.bin',
+    r'$windows.~bt',
+    r'$windows.~ws',
+    'system volume information',
+    'appdata',
+    'application data',
+    'windows',
+    'winnt',
+    'program files',
+    'program files (x86)',
+    'programdata',
+    'recovery',
+    'msocache',
+    'config.msi',
+    '__pycache__',
+    '.git', '.svn', '.hg',
+    'bootmgr', 'boot', 'efi',
+    '.vs', 'obj', 'bin',
+  };
+
+  /// Returns all supported image files under [folderPath] (recursive).
+  /// Uses a background isolate via [compute] so the UI stays responsive.
   Future<List<ImageFile>> listImages(String folderPath) async {
-    return Isolate.run(() => _scanFolderIsolate(folderPath));
+    try {
+      // compute() uses a Flutter-managed isolate pool — safer than Isolate.run
+      // and handles serialization of plain Dart objects correctly.
+      return await compute(_scanFolder, folderPath);
+    } catch (_) {
+      // If the isolate fails for any reason, fall back to synchronous scan
+      try {
+        return _scanFolder(folderPath);
+      } catch (_) {
+        return [];
+      }
+    }
   }
 
-  static List<ImageFile> _scanFolderIsolate(String folderPath) {
-    final dir = Directory(folderPath);
-    if (!dir.existsSync()) return [];
+  /// Top-level static function required by [compute].
+  /// BFS scan with depth-limit, cycle detection, and full exception guarding.
+  static List<ImageFile> _scanFolder(String folderPath) {
+    final rootDir = Directory(folderPath);
+    try {
+      if (!rootDir.existsSync()) return [];
+    } catch (_) {
+      return [];
+    }
 
     final files = <ImageFile>[];
+    final queue = <(Directory, int)>[(rootDir, 0)];
+    final visited = <String>{};
     try {
-      final entities = dir.listSync(followLinks: false);
+      visited.add(p.normalize(folderPath).toLowerCase());
+    } catch (_) {
+      return [];
+    }
+
+    while (queue.isNotEmpty && files.length < _maxDiscoveredImages) {
+      final (currentDir, depth) = queue.removeLast();
+
+      List<FileSystemEntity> entities;
+      try {
+        entities = currentDir.listSync(followLinks: false);
+      } catch (_) {
+        continue; // Permission denied — skip
+      }
+
       for (final entity in entities) {
-        if (entity is File && SupportedFormats.isSupported(entity.path)) {
+        if (files.length >= _maxDiscoveredImages) break;
+
+        String baseName;
+        String lowerName;
+        try {
+          baseName = p.basename(entity.path);
+          lowerName = baseName.toLowerCase();
+        } catch (_) {
+          continue;
+        }
+
+        // Skip hidden items and system directories
+        if (lowerName.startsWith('.') || _ignoredDirNames.contains(lowerName)) {
+          continue;
+        }
+
+        // Skip NTFS junctions and symlinks
+        try {
+          if (FileSystemEntity.isLinkSync(entity.path)) continue;
+        } catch (_) {
+          continue;
+        }
+
+        if (entity is Directory) {
+          if (depth < _maxDepth) {
+            try {
+              final canon = p.normalize(entity.path).toLowerCase();
+              if (visited.add(canon)) {
+                queue.add((entity, depth + 1));
+              }
+            } catch (_) {}
+          }
+        } else if (entity is File) {
           try {
+            if (!SupportedFormats.isSupported(entity.path)) continue;
             final stat = entity.statSync();
+            if (stat.size <= 0) continue;
             files.add(ImageFile(
               path: entity.path,
-              name: p.basename(entity.path),
+              name: baseName,
               extension: p.extension(entity.path).replaceFirst('.', '').toLowerCase(),
               sizeBytes: stat.size,
               modifiedAt: stat.modified,
             ));
-          } catch (_) {
-            // Ignore individual file lock/permission errors
-          }
+          } catch (_) {}
         }
       }
-      files.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    } catch (_) {
-      // In case of directory access errors
     }
+
+    // Sort newest first
+    files.sort((a, b) => b.modifiedAt.compareTo(a.modifiedAt));
     return files;
   }
 
-  /// Returns the folder of a given file path.
   String folderOf(String filePath) => p.dirname(filePath);
 
-  /// Returns next/previous image paths in a folder given the current path.
   Future<({String? prev, String? next})> siblings(String filePath) async {
     final folder = folderOf(filePath);
     final images = await listImages(folder);

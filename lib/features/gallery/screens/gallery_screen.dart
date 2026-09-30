@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,8 +10,8 @@ import '../../../core/di/providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/glass_container.dart';
 import '../../../core/widgets/glass_background.dart';
-import '../../../core/licensing/widgets/license_dialog.dart';
-import '../../../core/licensing/providers/license_provider.dart';
+import '../../../core/widgets/interactive_button.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../data/sources/platform/windows_shell_service.dart';
 import '../../../data/sources/local/image_file_service.dart';
 import '../providers/gallery_provider.dart';
@@ -526,7 +526,6 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   Widget _buildTopAppBar(BuildContext context, bool isDark, {Album? activeAlbum}) {
     final folderPath = ref.watch(currentFolderProvider);
     final folderName = folderPath != null ? p.basename(folderPath) : null;
-    final isPro = ref.watch(isProActiveProvider);
 
     String currentContextTitle = 'Library';
     IconData currentContextIcon = Icons.photo_library_outlined;
@@ -681,62 +680,76 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                             ),
                           )
                         else
-                          IconButton(
-                            icon: const Icon(Icons.search_rounded),
+                          SpectrumIconButton(
+                            icon: Icons.search_rounded,
                             tooltip: 'Search in folder',
                             onPressed: () => setState(() => _isSearching = true),
                           ),
 
-                        // Open Folder CTA
+                        // Open Folder CTA with spring scaling and vibrant glow
                         if (!isUltraNarrow)
-                          FilledButton.icon(
-                            icon: const Icon(Icons.folder_open_rounded, size: 16),
-                            label: Text(isNarrow ? 'Folder' : 'Open Folder'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: ApertixColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(horizontal: isNarrow ? 10 : 14, vertical: 10),
-                              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          InteractiveMotionButton(
+                            onTap: _pickFolder,
+                            tooltip: 'Select folder (including all subfolders)',
+                            glowColor: ApertixColors.primary,
+                            borderRadius: 10,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: isNarrow ? 10 : 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: ApertixColors.primary,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: ApertixColors.primary.withValues(alpha: 0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.folder_open_rounded, size: 16, color: Colors.white),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isNarrow ? 'Folder' : 'Open Folder',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            onPressed: _pickFolder,
                           )
                         else
-                          IconButton(
-                            icon: const Icon(Icons.folder_open_rounded),
-                            tooltip: 'Open Folder',
+                          SpectrumIconButton(
+                            icon: Icons.folder_open_rounded,
+                            tooltip: 'Open Folder (including all subfolders)',
                             onPressed: _pickFolder,
                           ),
                         const SizedBox(width: 4),
 
                         // Open Single File (direct button on wider screens)
                         if (!isUltraNarrow)
-                          IconButton(
-                            icon: const Icon(Icons.add_photo_alternate_outlined),
+                          SpectrumIconButton(
+                            icon: Icons.add_photo_alternate_outlined,
                             tooltip: 'Open Image File',
                             onPressed: _pickFile,
                           ),
 
-                        // Apertix Pro License Status
-                        IconButton(
-                          icon: Icon(
-                            isPro ? Icons.verified_rounded : Icons.workspace_premium_rounded,
-                            color: isPro ? ApertixColors.secondary : ApertixColors.cyanAccent,
-                          ),
-                          tooltip: isPro ? 'Apertix Pro Active' : 'Unlock Apertix Pro',
-                          onPressed: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
-                        ),
-
                         // Windows Shell Setup (collapses into more menu on narrow viewports)
                         if (Platform.isWindows && !isNarrow)
-                          IconButton(
-                            icon: const Icon(Icons.desktop_windows_rounded),
+                          SpectrumIconButton(
+                            icon: Icons.desktop_windows_rounded,
                             tooltip: 'Windows Default App & Shell Setup',
                             onPressed: _showWindowsShellSetupDialog,
                           ),
 
                         // Settings
-                        IconButton(
-                          icon: const Icon(Icons.settings_outlined),
+                        SpectrumIconButton(
+                          icon: Icons.settings_outlined,
                           tooltip: 'Settings',
                           onPressed: () => context.push('/settings'),
                         ),
@@ -846,7 +859,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  '${processed.length} of ${images.length} items • $totalSizeLabel',
+                  '${processed.length} of ${images.length} items â€¢ $totalSizeLabel',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -861,9 +874,11 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                 spacing: 4,
                 children: ['ALL', 'JPG', 'PNG', 'WEBP', 'RAW'].map((fmt) {
                   final isSelected = _formatFilter == fmt;
-                  return InkWell(
+                  return InteractiveMotionButton(
                     onTap: () => setState(() => _formatFilter = fmt),
-                    borderRadius: BorderRadius.circular(6),
+                    scaleOnHover: 1.08,
+                    borderRadius: 6,
+                    glowColor: ApertixColors.primary,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -894,12 +909,14 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
               const SizedBox(width: 8),
 
               // Favorites Filter Pill
-              InkWell(
+              InteractiveMotionButton(
                 onTap: () => setState(() {
                   _favoritesFilter = !_favoritesFilter;
                   _activeAlbumId = null;
                 }),
-                borderRadius: BorderRadius.circular(6),
+                scaleOnHover: 1.08,
+                borderRadius: 6,
+                glowColor: const Color(0xFFFF4757),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -936,7 +953,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
               const Spacer(),
 
               // Selection Mode Toggle Button
-              InkWell(
+              InteractiveMotionButton(
                 onTap: () {
                   if (_isSelectionMode) {
                     _clearSelection();
@@ -944,7 +961,9 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
                     _selectAll(processed);
                   }
                 },
-                borderRadius: BorderRadius.circular(6),
+                scaleOnHover: 1.06,
+                borderRadius: 6,
+                glowColor: ApertixColors.cyanAccent,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -1071,12 +1090,20 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
   }
 
   Future<void> _pickFolder() async {
-    final folder = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: 'Select Image Folder',
-    );
-    if (folder != null && mounted) {
-      _clearSelection();
-      ref.read(galleryProvider.notifier).loadFolder(folder);
+    try {
+      final folder = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Select Image Folder',
+      );
+      if (folder != null && mounted) {
+        _clearSelection();
+        ref.read(galleryProvider.notifier).loadFolder(folder);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to open folder: $e')),
+        );
+      }
     }
   }
 
@@ -1087,7 +1114,8 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
       dialogTitle: 'Open Image',
     );
     if (result != null && result.files.isNotEmpty && mounted) {
-      final path = result.files.first.path!;
+      final path = result.files.first.path;
+      if (path == null) return;
       final folder = ref.read(imageFileServiceProvider).folderOf(path);
       final images = await ref.read(imageFileServiceProvider).listImages(folder);
       final index = images.indexWhere((f) => f.path == path);
@@ -1178,7 +1206,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
           ],
         ),
         content: Text(
-          'Configure Apertix as your primary image player for JPEG, PNG, WebP, GIF, BMP, RAW, and 80+ media formats.\n\nYou can open Windows Default Apps settings or export a customized registry (.reg) script to your Desktop.',
+          'Configure Spectrum as your primary image player for JPEG, PNG, WebP, GIF, BMP, RAW, and 80+ media formats.\n\nYou can open Windows Default Apps settings or export a customized registry (.reg) script to your Desktop.',
           style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -1242,6 +1270,7 @@ class _ThumbnailGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final allPaths = allImages.map((f) => f.path).toList();
+    final indexMap = { for (int i = 0; i < allImages.length; i++) allImages[i].path: i };
 
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
@@ -1254,10 +1283,10 @@ class _ThumbnailGrid extends StatelessWidget {
       itemCount: images.length,
       itemBuilder: (context, index) {
         final img = images[index];
-        final globalIndex = allImages.indexWhere((f) => f.path == img.path);
+        final globalIndex = indexMap[img.path] ?? index;
         final isSelected = selectedPaths.contains(img.path);
 
-        return ImageThumbnail(
+        Widget card = ImageThumbnail(
           imageFile: img,
           isSelected: isSelected,
           isSelectionMode: isSelectionMode,
@@ -1265,10 +1294,19 @@ class _ThumbnailGrid extends StatelessWidget {
           onTap: () => context.push('/viewer', extra: {
             'filePath': img.path,
             'fileList': allPaths,
-            'index': globalIndex < 0 ? 0 : globalIndex,
+            'index': globalIndex,
           }),
           onQuickEdit: () => context.push('/editor', extra: {'filePath': img.path}),
         );
+
+        if (index < 32) {
+          card = card
+              .animate(delay: (index * 16).ms)
+              .fadeIn(duration: 220.ms, curve: Curves.easeOutCubic)
+              .scaleXY(begin: 0.92, end: 1.0, duration: 220.ms, curve: Curves.easeOutBack);
+        }
+
+        return card;
       },
     );
   }
@@ -1294,33 +1332,36 @@ class _EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-            // Official Apertix Cyber-Iris Logo (from Stitch)
+            // Spectrum Logo with breathing scale pulse
             Container(
-              width: 88,
-              height: 88,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
+                color: const Color(0xFF0A0A0A),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: ApertixColors.cyanAccent.withValues(alpha: 0.35),
-                    blurRadius: 20,
-                    spreadRadius: 2,
+                    color: ApertixColors.primary.withValues(alpha: 0.50),
+                    blurRadius: 28,
+                    spreadRadius: 4,
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(24),
                 child: Image.asset(
-                  'assets/icons/apertix_logo.png',
-                  fit: BoxFit.cover,
+                  'assets/icons/spectrum_logo.png',
+                  fit: BoxFit.contain,
                 ),
               ),
-            ),
+            )
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(begin: 0.96, end: 1.04, duration: 2200.ms, curve: Curves.easeInOutSine),
             const SizedBox(height: 24),
 
             // Title
             Text(
-              'Apertix Studio',
+              'Spectrum Studio',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
@@ -1342,20 +1383,12 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 28),
 
-            // Action Button
-            FilledButton.icon(
+            // Action Button with fluid spring & glowing pulse
+            SpectrumGradientButton(
               onPressed: onPickFolder,
-              icon: const Icon(Icons.folder_open_rounded, size: 18),
-              label: const Text('Open Images Folder'),
-              style: FilledButton.styleFrom(
-                backgroundColor: ApertixColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 4,
-                shadowColor: ApertixColors.primary.withValues(alpha: 0.5),
-              ),
+              icon: Icons.folder_open_rounded,
+              label: 'Open Images Folder',
+              tooltip: 'Choose folder (all nested subfolders are scanned automatically)',
             ),
           ],
         ),
@@ -1389,3 +1422,4 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+

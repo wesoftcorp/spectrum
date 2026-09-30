@@ -21,6 +21,7 @@ abstract final class SupportedFormats {
 
   /// Check if a file path has a supported extension.
   static bool isSupported(String path) {
+    if (path.isEmpty || !path.contains('.')) return false;
     final ext = path.split('.').last.toLowerCase();
     return all.contains(ext);
   }
@@ -31,7 +32,7 @@ abstract final class SupportedFormats {
 
 /// Global app-wide constants.
 abstract final class AppConstants {
-  static const appName = 'Apertix';
+  static const appName = 'Spectrum';
   static const appVersion = '0.1.0';
   static const recentFilesLimit = 50;
   static const cacheMaxImages = 20;

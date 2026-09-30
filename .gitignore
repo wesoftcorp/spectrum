@@ -43,3 +43,21 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Graphify knowledge graph cache (auto-generated, not source code)
+graphify-out/
+
+# Flutter/Dart build artifacts
+build/
+.dart_tool/
+*.g.dart
+*.freezed.dart
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Distribution (binaries tracked separately)
+dist_release/*.zip
+dist_release/*.msix

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Apertix design token palette — tuned for maximum visual comfort and reduced eye strain.
+/// Spectrum / Apertix design token palette — tuned for maximum visual comfort and reduced eye strain.
+typedef SpectrumColors = ApertixColors;
+
 abstract final class ApertixColors {
   // Primary — Calming Cobalt-Sapphire Blue
   static const primary = Color(0xFF4F6EF7);

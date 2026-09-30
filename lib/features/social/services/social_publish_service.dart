@@ -73,6 +73,19 @@ class SocialPublishService {
     String? altText,
   }) async {
     try {
+      final uri = Uri.tryParse(webhookUrl.trim());
+      if (uri == null ||
+          !uri.isScheme('https') ||
+          (uri.host != 'discord.com' &&
+              uri.host != 'ptb.discord.com' &&
+              uri.host != 'canary.discord.com') ||
+          !uri.path.startsWith('/api/webhooks/')) {
+        return const SocialPublishResult(
+          success: false,
+          message: 'Invalid Discord webhook URL. Must be an official https://discord.com/api/webhooks/... URL',
+        );
+      }
+
       final file = File(imagePath);
       if (!file.existsSync()) {
         return const SocialPublishResult(success: false, message: 'Image file does not exist');
@@ -119,7 +132,15 @@ class SocialPublishService {
     required String caption,
   }) async {
     try {
-      final url = 'https://api.telegram.org/bot$botToken/sendPhoto';
+      final cleanToken = botToken.trim();
+      if (!RegExp(r'^[0-9]+:[a-zA-Z0-9_-]+$').hasMatch(cleanToken)) {
+        return const SocialPublishResult(
+          success: false,
+          message: 'Invalid Telegram bot token format',
+        );
+      }
+
+      final url = 'https://api.telegram.org/bot$cleanToken/sendPhoto';
       final fileName = p.basename(imagePath);
 
       final formData = FormData.fromMap({
@@ -260,6 +281,11 @@ class SocialPublishService {
       dir,
       '${baseName}_${params.platform.name.toLowerCase()}_${params.preset.name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')}.jpg',
     );
+
+    final outDir = Directory(dir);
+    if (!outDir.existsSync()) {
+      outDir.createSync(recursive: true);
+    }
 
     File(outPath).writeAsBytesSync(encoded);
     return outPath;

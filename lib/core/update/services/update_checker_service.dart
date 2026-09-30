@@ -44,7 +44,10 @@ class UpdateCheckerService {
         final data = response.data as Map<String, dynamic>;
         final tagName = (data['tag_name'] as String? ?? '').replaceFirst(RegExp(r'^[vV]'), '');
         final body = data['body'] as String? ?? '';
-        final htmlUrl = data['html_url'] as String? ?? 'https://github.com/wesoftcorp/apertix/releases';
+        final rawUrl = data['html_url'] as String? ?? 'https://github.com/wesoftcorp/apertix/releases';
+        final htmlUrl = (rawUrl.startsWith('https://') || rawUrl.startsWith('http://'))
+            ? rawUrl
+            : 'https://github.com/wesoftcorp/apertix/releases';
         final published = DateTime.tryParse(data['published_at'] as String? ?? '');
 
         final hasNewer = _isVersionGreater(tagName, current);
@@ -72,8 +75,10 @@ class UpdateCheckerService {
   /// Evaluates if versionA > versionB (e.g., "0.2.0" > "0.1.0").
   static bool _isVersionGreater(String versionA, String versionB) {
     if (versionA.isEmpty || versionB.isEmpty) return false;
-    final partsA = versionA.split('.').map((p) => int.tryParse(p) ?? 0).toList();
-    final partsB = versionB.split('.').map((p) => int.tryParse(p) ?? 0).toList();
+    final cleanA = versionA.split('-').first.split('+').first;
+    final cleanB = versionB.split('-').first.split('+').first;
+    final partsA = cleanA.split('.').map((p) => int.tryParse(p) ?? 0).toList();
+    final partsB = cleanB.split('.').map((p) => int.tryParse(p) ?? 0).toList();
 
     final maxLen = partsA.length > partsB.length ? partsA.length : partsB.length;
     for (int i = 0; i < maxLen; i++) {

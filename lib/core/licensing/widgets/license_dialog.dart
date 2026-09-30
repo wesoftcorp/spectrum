@@ -163,7 +163,7 @@ class _LicenseDialogState extends ConsumerState<LicenseDialog> {
               Row(
                 children: [
                   const Text(
-                    'Apertix Pro',
+                    'Spectrum Pro',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
                   ),
                   const SizedBox(width: 8),
@@ -326,7 +326,7 @@ class _LicenseDialogState extends ConsumerState<LicenseDialog> {
               icon: _isActivating
                   ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.lock_open_rounded, size: 16),
-              label: const Text('Unlock Apertix Pro'),
+              label: const Text('Unlock Spectrum Pro'),
               style: FilledButton.styleFrom(
                 backgroundColor: ApertixColors.primary,
                 foregroundColor: Colors.white,
@@ -373,7 +373,7 @@ class _LicenseDialogState extends ConsumerState<LicenseDialog> {
           const SizedBox(height: 16),
           const Center(
             child: Text(
-              'Apertix Pro Active',
+              'Spectrum Pro Active',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
             ),
           ),

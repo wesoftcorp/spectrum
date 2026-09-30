@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.rockstarrajeev" "\0"
-            VALUE "FileDescription", "apertix" "\0"
+            VALUE "FileDescription", "Spectrum" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "apertix" "\0"
+            VALUE "InternalName", "spectrum" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.rockstarrajeev. All rights reserved." "\0"
-            VALUE "OriginalFilename", "apertix.exe" "\0"
-            VALUE "ProductName", "apertix" "\0"
+            VALUE "OriginalFilename", "spectrum.exe" "\0"
+            VALUE "ProductName", "Spectrum" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

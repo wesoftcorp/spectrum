@@ -1,12 +1,10 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
 import '../../../core/theme/app_theme.dart';
-import '../../../core/licensing/providers/license_provider.dart';
-import '../../../core/licensing/widgets/license_dialog.dart';
 import '../../collections/providers/collections_provider.dart';
 import '../../collections/widgets/album_picker_dialog.dart';
 import '../../settings/widgets/shortcuts_dialog.dart';
@@ -55,7 +53,6 @@ class StudioSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isPro = ref.watch(isProActiveProvider);
     final albums = ref.watch(albumsProvider);
     final favorites = ref.watch(favoritesProvider);
 
@@ -93,7 +90,7 @@ class StudioSidebar extends ConsumerWidget {
                   child: Column(
                     children: [
               // Top Brand Header & Collapse Toggle
-              _buildHeader(context, isDark, isPro),
+              _buildHeader(context, isDark),
 
               const Divider(height: 1),
 
@@ -102,10 +99,6 @@ class StudioSidebar extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                   children: [
-                    // Pro Status Banner Capsule
-                    _buildProBanner(context, isDark, isPro),
-                    const SizedBox(height: 12),
-
                     // Section: Library
                     if (!isCollapsed)
                       _buildSectionTitle('LIBRARY', isDark),
@@ -200,24 +193,18 @@ class StudioSidebar extends ConsumerWidget {
                     _buildNavTile(
                       icon: Icons.compare_arrows_rounded,
                       label: 'Comparison Studio',
-                      badge: 'PRO',
-                      isProFeature: true,
                       onTap: onOpenComparisonStudio,
                       isDark: isDark,
                     ),
                     _buildNavTile(
                       icon: Icons.auto_awesome_motion_rounded,
                       label: 'Batch Studio Pro',
-                      badge: 'PRO',
-                      isProFeature: true,
                       onTap: onOpenBatchStudio,
                       isDark: isDark,
                     ),
                     _buildNavTile(
                       icon: Icons.cloud_sync_rounded,
                       label: 'Cloud Vault Sync',
-                      badge: 'VAULT',
-                      isProFeature: true,
                       onTap: onOpenCloudVault,
                       isDark: isDark,
                     ),
@@ -260,7 +247,7 @@ class StudioSidebar extends ConsumerWidget {
 );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark, bool isPro) {
+  Widget _buildHeader(BuildContext context, bool isDark) {
     if (isCollapsed) {
       return Container(
         height: 64,
@@ -278,16 +265,17 @@ class StudioSidebar extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: [
-          // Official Apertix Cyber-Iris Logo (from Stitch)
+          // Spectrum Logo
           Container(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
+              color: const Color(0xFF0A0A0A),
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: ApertixColors.cyanAccent.withValues(alpha: 0.35),
-                  blurRadius: 10,
+                  color: ApertixColors.primary.withValues(alpha: 0.45),
+                  blurRadius: 12,
                   spreadRadius: 1,
                 ),
               ],
@@ -295,8 +283,8 @@ class StudioSidebar extends ConsumerWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Image.asset(
-                'assets/icons/apertix_logo.png',
-                fit: BoxFit.cover,
+                'assets/icons/spectrum_logo.png',
+                fit: BoxFit.contain,
               ),
             ),
           ),
@@ -314,7 +302,7 @@ class StudioSidebar extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'APERTIX',
+                        'SPECTRUM',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
@@ -326,21 +314,19 @@ class StudioSidebar extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: isPro
-                              ? ApertixColors.secondary.withValues(alpha: 0.2)
-                              : ApertixColors.primary.withValues(alpha: 0.15),
+                          color: ApertixColors.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: isPro ? ApertixColors.secondary : ApertixColors.primary,
+                            color: ApertixColors.primary,
                             width: 0.8,
                           ),
                         ),
-                        child: Text(
-                          isPro ? 'PRO' : 'STUDIO',
+                        child: const Text(
+                          'STUDIO',
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
-                            color: isPro ? ApertixColors.secondary : ApertixColors.primary,
+                            color: ApertixColors.primary,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -370,87 +356,6 @@ class StudioSidebar extends ConsumerWidget {
     );
   }
 
-  Widget _buildProBanner(BuildContext context, bool isDark, bool isPro) {
-    if (isCollapsed) {
-      return IconButton(
-        icon: Icon(
-          isPro ? Icons.verified_rounded : Icons.workspace_premium_outlined,
-          color: isPro ? ApertixColors.secondary : ApertixColors.cyanAccent,
-          size: 22,
-        ),
-        tooltip: isPro ? 'Apertix Pro Active' : 'Unlock Apertix Pro',
-        onPressed: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
-      );
-    }
-
-    return InkWell(
-      onTap: () => showDialog(context: context, builder: (_) => const LicenseDialog()),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: isPro
-                ? [
-                    ApertixColors.secondary.withValues(alpha: isDark ? 0.20 : 0.15),
-                    ApertixColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
-                  ]
-                : [
-                    ApertixColors.cyanAccent.withValues(alpha: isDark ? 0.15 : 0.12),
-                    ApertixColors.primary.withValues(alpha: isDark ? 0.12 : 0.06),
-                  ],
-          ),
-          border: Border.all(
-            color: isPro
-                ? ApertixColors.secondary.withValues(alpha: 0.5)
-                : ApertixColors.cyanAccent.withValues(alpha: 0.4),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isPro ? Icons.verified_rounded : Icons.workspace_premium_rounded,
-              color: isPro ? ApertixColors.secondary : ApertixColors.cyanAccent,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isPro ? 'PRO ACTIVATED' : 'UNLOCK PRO',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                      color: isPro ? ApertixColors.secondary : ApertixColors.cyanAccent,
-                    ),
-                  ),
-                  Text(
-                    isPro ? 'All 12 Studio Engines Active' : 'Batch, Compare & Cloud Sync',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 16,
-              color: isDark ? Colors.white38 : Colors.black38,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildSectionTitle(String title, bool isDark) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
@@ -473,7 +378,6 @@ class StudioSidebar extends ConsumerWidget {
     String? subtitle,
     int? count,
     String? badge,
-    bool isProFeature = false,
     bool isActive = false,
     Color? activeColor,
     required VoidCallback onTap,
@@ -668,3 +572,4 @@ class StudioSidebar extends ConsumerWidget {
     );
   }
 }
+

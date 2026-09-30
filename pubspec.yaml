@@ -1,5 +1,5 @@
 name: apertix
-description: "A fast, open-core, cross-platform image viewer & editor with built-in social publishing."
+description: "Spectrum — A fast, modern cross-platform photo viewer and editor."
 publish_to: none
 version: 0.1.0+1
 
@@ -65,6 +65,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
   flutter_launcher_icons: ^0.14.3
+  msix: ^3.18.0
 
 flutter_launcher_icons:
   image_path: "assets/icons/app_icon.png"
@@ -79,3 +80,13 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icons/
+
+msix_config:
+  display_name: Spectrum
+  publisher_display_name: RockstarRajeev
+  identity_name: com.rockstarrajeev.spectrum
+  msix_version: 0.1.0.0
+  logo_path: assets/icons/app_icon.png
+  capabilities: internetClient, photosLibrary
+  architecture: x64
+  executable_name: spectrum.exe

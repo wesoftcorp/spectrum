@@ -1,4 +1,4 @@
-package com.rockstarrajeev.apertix
+package com.rockstarrajeev.spectrum
 
 import io.flutter.embedding.android.FlutterActivity
 

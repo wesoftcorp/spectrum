@@ -292,6 +292,11 @@ class ImageProcessorService {
         break;
     }
 
+    final outDir = Directory(p.dirname(task.outputPath));
+    if (!outDir.existsSync()) {
+      outDir.createSync(recursive: true);
+    }
+
     File(task.outputPath).writeAsBytesSync(encodedBytes);
     return task.outputPath;
   }

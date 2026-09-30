@@ -53,6 +53,17 @@ class BatchProcessorService {
     required void Function(BatchProgress progress) onProgress,
   }) async {
     _isCancelled = false;
+    if (config.inputPaths.isEmpty) {
+      return BatchSummary(
+        total: 0,
+        succeeded: 0,
+        failed: 0,
+        duration: Duration.zero,
+        results: const [],
+        outputDirectory: config.outputDirectory ?? '',
+      );
+    }
+
     final stopwatch = Stopwatch()..start();
     final results = <BatchResultItem>[];
 
@@ -227,6 +238,10 @@ class BatchProcessorService {
       }
 
       final outFile = File(task.outputPath);
+      final parentDir = outFile.parent;
+      if (!parentDir.existsSync()) {
+        parentDir.createSync(recursive: true);
+      }
       outFile.writeAsBytesSync(encoded);
 
       return _BatchItemResult(

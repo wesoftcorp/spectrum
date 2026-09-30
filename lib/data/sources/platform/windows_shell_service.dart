@@ -24,49 +24,50 @@ class WindowsShellService {
 
     final exePath = Platform.resolvedExecutable.replaceAll('\\', '\\\\');
     final dir = destinationDir ?? p.join(Platform.environment['USERPROFILE'] ?? 'C:', 'Desktop');
-    final outPath = p.join(dir, 'Apertix_File_Associations.reg');
+    await Directory(dir).create(recursive: true);
+    final outPath = p.join(dir, 'Spectrum_File_Associations.reg');
 
     final buffer = StringBuffer();
     buffer.writeln('Windows Registry Editor Version 5.00');
     buffer.writeln();
-    buffer.writeln('; Apertix Image Viewer & Editor — Shell Associations');
+    buffer.writeln('; Spectrum Image Viewer & Editor — Shell Associations');
     buffer.writeln();
 
     // 1. Register ProgID
-    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\Apertix.Picture]');
-    buffer.writeln('@="Apertix Image File"');
-    buffer.writeln('"FriendlyTypeName"="Apertix Image"');
+    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\Spectrum.Picture]');
+    buffer.writeln('@="Spectrum Image File"');
+    buffer.writeln('"FriendlyTypeName"="Spectrum Image"');
     buffer.writeln();
 
-    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\Apertix.Picture\DefaultIcon]');
+    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\Spectrum.Picture\DefaultIcon]');
     buffer.writeln('@="$exePath,0"');
     buffer.writeln();
 
-    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\Apertix.Picture\shell\open]');
-    buffer.writeln('@="Open with Apertix"');
+    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\Spectrum.Picture\shell\open]');
+    buffer.writeln('@="Open with Spectrum"');
     buffer.writeln();
 
-    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\Apertix.Picture\shell\open\command]');
+    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\Spectrum.Picture\shell\open\command]');
     buffer.writeln('@="\\"$exePath\\" \\"%1\\""');
     buffer.writeln();
 
     // 2. Associate supported formats
     for (final ext in SupportedFormats.all) {
       buffer.writeln('[HKEY_CURRENT_USER\\Software\\Classes\\.$ext]');
-      buffer.writeln('@="Apertix.Picture"');
+      buffer.writeln('@="Spectrum.Picture"');
       buffer.writeln();
       buffer.writeln('[HKEY_CURRENT_USER\\Software\\Classes\\.$ext\\OpenWithProgids]');
-      buffer.writeln('"Apertix.Picture"=""');
+      buffer.writeln('"Spectrum.Picture"=""');
       buffer.writeln();
     }
 
     // 3. Add to Explorer context menu for all images
-    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\image\shell\Apertix]');
-    buffer.writeln('@="Open in Apertix"');
+    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\image\shell\Spectrum]');
+    buffer.writeln('@="Open in Spectrum"');
     buffer.writeln('"Icon"="$exePath,0"');
     buffer.writeln();
 
-    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\image\shell\Apertix\command]');
+    buffer.writeln(r'[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\image\shell\Spectrum\command]');
     buffer.writeln('@="\\"$exePath\\" \\"%1\\""');
     buffer.writeln();
 

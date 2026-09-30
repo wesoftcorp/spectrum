@@ -6,6 +6,8 @@ import 'core/theme/theme_provider.dart';
 import 'core/router/app_router.dart';
 
 /// Root application widget.
+typedef SpectrumApp = ApertixApp;
+
 class ApertixApp extends ConsumerWidget {
   const ApertixApp({super.key});
 
@@ -15,7 +17,7 @@ class ApertixApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'Apertix',
+      title: 'Spectrum',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

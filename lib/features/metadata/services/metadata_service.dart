@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:exif/exif.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
+import 'package:path/path.dart' as p;
 import '../models/image_metadata.dart';
 
 class MetadataService {
@@ -33,14 +34,20 @@ class MetadataService {
       rawTags[entry.key] = entry.value.printable;
     }
 
-    // Try decoding header for dimensions
+    // Try fast EXIF dimensions first before falling back to full image decoding
     String? dimStr;
-    try {
-      final header = img.decodeImage(bytes);
-      if (header != null) {
-        dimStr = '${header.width} × ${header.height} px';
-      }
-    } catch (_) {}
+    final exifW = data['EXIF ExifImageWidth']?.printable ?? data['Image ImageWidth']?.printable;
+    final exifH = data['EXIF ExifImageLength']?.printable ?? data['Image ImageLength']?.printable;
+    if (exifW != null && exifH != null && int.tryParse(exifW) != null && int.tryParse(exifH) != null) {
+      dimStr = '$exifW × $exifH px';
+    } else {
+      try {
+        final header = img.decodeImage(bytes);
+        if (header != null) {
+          dimStr = '${header.width} × ${header.height} px';
+        }
+      } catch (_) {}
+    }
 
     // Extract GPS
     double? lat;
@@ -119,8 +126,19 @@ class MetadataService {
     }
 
     // Re-encoding without EXIF payload strips GPS and camera metadata completely
-    final sanitized = img.encodeJpg(decoded, quality: 95);
-    File(output).writeAsBytesSync(sanitized);
+    final ext = p.extension(output).toLowerCase().replaceFirst('.', '');
+    final List<int> sanitized;
+    if (ext == 'png') {
+      sanitized = img.encodePng(decoded);
+    } else {
+      sanitized = img.encodeJpg(decoded, quality: 95);
+    }
+
+    final outFile = File(output);
+    if (!outFile.parent.existsSync()) {
+      outFile.parent.createSync(recursive: true);
+    }
+    outFile.writeAsBytesSync(sanitized);
     return output;
   }
 }

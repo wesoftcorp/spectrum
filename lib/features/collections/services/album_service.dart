@@ -13,9 +13,13 @@ class AlbumService {
     final prefs = await SharedPreferences.getInstance();
     final rawList = prefs.getStringList(_key) ?? [];
     return rawList.map((str) {
-      final map = jsonDecode(str) as Map<String, dynamic>;
-      return Album.fromJson(map);
-    }).toList();
+      try {
+        final map = jsonDecode(str) as Map<String, dynamic>;
+        return Album.fromJson(map);
+      } catch (_) {
+        return null;
+      }
+    }).whereType<Album>().toList();
   }
 
   /// Creates a new virtual album.

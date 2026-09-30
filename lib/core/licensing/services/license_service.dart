@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/license_info.dart';
 
@@ -45,8 +46,8 @@ class LicenseService {
     final b2 = parts[3];
     final checksum = parts[4];
 
-    // Master / developer keys
-    if (b1 == 'DEMO' || b1 == 'BETA' || b1 == 'TEST') return true;
+    // Master / developer keys (only permitted during debug/testing)
+    if (kDebugMode && (b1 == 'DEMO' || b1 == 'BETA' || b1 == 'TEST')) return true;
 
     // Cryptographic HMAC-SHA256 checksum verification
     final expectedChecksumWithEmail = _calculateChecksum(b1, b2, email?.trim().toLowerCase());

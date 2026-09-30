@@ -12,8 +12,11 @@ final licenseProvider =
 class LicenseNotifier extends AsyncNotifier<LicenseInfo> {
   @override
   Future<LicenseInfo> build() async {
-    final service = ref.watch(licenseServiceProvider);
-    return service.getActiveLicense();
+    // Free open-access mode: all features unlocked
+    return const LicenseInfo(
+      tier: LicenseTier.pro,
+      isPerpetual: true,
+    );
   }
 
   Future<bool> activate(String key, {String? email}) async {
@@ -33,7 +36,7 @@ class LicenseNotifier extends AsyncNotifier<LicenseInfo> {
 }
 
 /// Convenience selector checking if Pro tier is unlocked.
+/// All features are fully unlocked and free to use.
 final isProActiveProvider = Provider<bool>((ref) {
-  final license = ref.watch(licenseProvider).valueOrNull;
-  return license?.isPro ?? false;
+  return true;
 });

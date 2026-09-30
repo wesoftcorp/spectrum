@@ -163,7 +163,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Apertix Pro Photo Editor',
+                      'Spectrum Photo Editor',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,

@@ -27,7 +27,9 @@ class FileWatcherService {
             }
           });
         }
-      });
+      }, onError: (_) {
+        stop();
+      }, cancelOnError: true);
     } catch (_) {
       // Platform may not support file watching on certain restricted mount points
     }

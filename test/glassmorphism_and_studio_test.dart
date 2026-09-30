@@ -70,7 +70,7 @@ void main() {
       );
 
       // Verify Brand & Pro presence
-      expect(find.text('APERTIX'), findsOneWidget);
+      expect(find.text('SPECTRUM'), findsOneWidget);
       expect(find.text('All Photos'), findsOneWidget);
       expect(find.text('Favorites'), findsOneWidget);
       expect(find.text('Summer'), findsOneWidget);
@@ -124,7 +124,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Expanded: reveals full brand and engines
-      expect(find.text('APERTIX'), findsOneWidget);
+      expect(find.text('SPECTRUM'), findsOneWidget);
       expect(find.text('Comparison Studio'), findsOneWidget);
     });
   });
@@ -155,6 +155,54 @@ void main() {
         await tempDir.delete(recursive: true);
       }
     });
+
+    test('ImageFileService listImages recursively discovers images in nested subfolders', () async {
+      final service = ImageFileService();
+      final tempDir = await Directory.systemTemp.createTemp('apertix_recursive_test_');
+
+      try {
+        // Root image
+        final rootImg = File('${tempDir.path}/root.jpg');
+        await rootImg.writeAsBytes([0xFF, 0xD8, 0xFF]);
+
+        // Subfolder 1
+        final subDir1 = Directory('${tempDir.path}/vacation');
+        await subDir1.create();
+        final subImg1 = File('${subDir1.path}/beach.png');
+        await subImg1.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
+
+        // Deep nested subfolder
+        final deepDir = Directory('${subDir1.path}/2026/summer');
+        await deepDir.create(recursive: true);
+        final deepImg = File('${deepDir.path}/sunset.webp');
+        await deepImg.writeAsBytes([0x52, 0x49, 0x46, 0x46]);
+
+        // Ignored non-image file
+        final textDoc = File('${deepDir.path}/notes.txt');
+        await textDoc.writeAsString('holiday notes');
+
+        // Subfolder with hidden dot prefix (should be skipped)
+        final hiddenDir = Directory('${tempDir.path}/.hidden_album');
+        await hiddenDir.create();
+        final hiddenImg = File('${hiddenDir.path}/hidden.jpg');
+        await hiddenImg.writeAsBytes([0xFF, 0xD8, 0xFF]);
+
+        final discovered = await service.listImages(tempDir.path);
+        final discoveredNames = discovered.map((f) => f.name).toSet();
+
+        // Must discover root, subfolder, and deeply nested subfolder photos
+        expect(discoveredNames.contains('root.jpg'), isTrue);
+        expect(discoveredNames.contains('beach.png'), isTrue);
+        expect(discoveredNames.contains('sunset.webp'), isTrue);
+
+        // Must NOT discover text file or images in hidden directories
+        expect(discoveredNames.contains('notes.txt'), isFalse);
+        expect(discoveredNames.contains('hidden.jpg'), isFalse);
+        expect(discovered.length, equals(3));
+      } finally {
+        await tempDir.delete(recursive: true);
+      }
+    });
   });
 
   group('Photo Editor & Social Hub Resilience Tests', () {
@@ -175,7 +223,7 @@ void main() {
       );
 
       // Verify that instead of throwing an unhandled exception, it renders the welcome state cleanly
-      expect(find.text('Apertix Pro Photo Editor'), findsOneWidget);
+      expect(find.text('Spectrum Photo Editor'), findsOneWidget);
       expect(find.text('Select Photo to Edit'), findsOneWidget);
       expect(find.text('Open Photo'), findsOneWidget);
     });
